@@ -1,0 +1,16 @@
+{
+  "name": "handbrake-cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "stats.js",
+  "dependencies": {
+    "comma-separated-values": "^3.6.4",
+    "filesize": "^3.3.0",
+    "glob": "^7.0.3",
+    "node-ffprobe": "^1.2.2"
+  },
+  "devDependencies": {},
+  "scripts": {},
+  "author": "",
+  "license": "ISC"
+}
