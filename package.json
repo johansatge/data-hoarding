@@ -1,6 +1,6 @@
 {
   "name": "data-hoarding",
-  "priate": true,
+  "private": true,
   "version": "1.0.0",
   "description": "",
   "main": "stats.js",
