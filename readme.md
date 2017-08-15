@@ -1,7 +1,7 @@
 # Conversion
 
 ```
-node convert.js /path/to/file1.mp4 /path/to/file2.mp4
+node convert_video.js /path/to/file1.mp4 /path/to/file2.mp4
 ```
 
 * Re-encode a movie with a smaller size, and a little quality loss
@@ -12,7 +12,7 @@ node convert.js /path/to/file1.mp4 /path/to/file2.mp4
 # Stats
 
 ```
-node stats.js /path/to/a/folder > ~/Desktop/stats.csv
+node stats_video.js /path/to/a/folder > ~/Desktop/stats.csv
 ```
 
 * Look for all video files in the given directory
