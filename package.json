@@ -1,5 +1,6 @@
 {
-  "name": "handbrake-cli",
+  "name": "data-hoarding",
+  "priate": true,
   "version": "1.0.0",
   "description": "",
   "main": "stats.js",
