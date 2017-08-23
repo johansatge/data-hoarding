@@ -15,7 +15,6 @@
 * HandBrake
   * Download [HandbrakeCLI](https://handbrake.fr)
   * Install it under `/Applications/HandbrakeCLI`
-* `Node 8`
 
 ## Stabilize a video
 
