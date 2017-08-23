@@ -1,30 +1,18 @@
 <?php
 
-array_shift($argv);
-$source_path = false;
-$dry_run = in_array('--dry-run', $argv);
-$strategy = false;
-$strategies = ['exif_date', 'creation_date'];
-foreach($argv as $arg)
-{
-  preg_match_all('#^--strategy=(' . implode('|', $strategies) . ')$#', $arg, $matches);
-  if (!empty($matches[1][0]))
-  {
-    $strategy = $matches[1][0];
-  }
-  else if (!in_array($arg, ['--dry-run']))
-  {
-    $source_path = $arg;
-  }
-}
+require('parse_argv.php');
+$args = parse_argv();
+$input = count($args['_']) > 0 ? $args['_'][0] : '';
+$strategy = !empty($args['strategy']) && in_array(['exif_date', 'creation_date'], $args['strategy']) ? $args['strategy'] : false;
+$dry_run = !empty($args['dry-run']);
 
-if (empty($source_path) || empty($strategy))
+if (empty($input) || $strategy)
 {
   echo 'Source and strategy needed' . "\n";
   exit(1);
 }
 
-RenameMedias::exec($source_path, $strategy, $dry_run);
+RenameMedias::exec($input, $strategy, $dry_run);
 
 class RenameMedias
 {

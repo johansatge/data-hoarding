@@ -2,6 +2,12 @@
 
 > A collection of scripts to organize and edit files
 
+* [Dependencies](#dependencies)
+* [Stabilize a video](#stabilize-a-video)
+* [Compress videos](#compress-videos)
+* [Rename files by date](#rename-files-by-date)
+* [Extract EXIF data from a picture](#extract-exif-data-from-a-picture)
+
 ## Dependencies
 
 * `ffmpeg`
@@ -69,3 +75,12 @@ Options:
 Resources:
 
 * [EXIF Tags](https://sno.phy.queensu.ca/~phil/exiftool/TagNames/EXIF.html)
+
+## Extract EXIF data from a picture
+
+Extract EXIF data from a picture and print it as a JSON file in `stdout`.
+
+```
+Usage:
+$ php extract_exif.php picture.jpg > exif.json
+```

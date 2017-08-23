@@ -1,37 +1,24 @@
 <?php
 
+require('parse_argv.php');
+$args = parse_argv();
+$input = count($args['_']) > 0 ? $args['_'][0] : '';
 
-array_shift($argv);
-$source_path = false;
-$help = in_array('--help', $argv);
-foreach($argv as $arg)
+if (empty($input))
 {
-  if (!in_array($arg, ['--help']))
-  {
-    $source_path = $arg;
-  }
-}
-
-if ($help || empty($source_path))
-{
-  echo join("\n", [
-  str_repeat('-', 20),
-  'Usage:',
-  '$ php extract_exif.php /source/image.jpg > /source/image.json',
-  str_repeat('-', 20),
-  ]) . "\n";
+  echo 'Source file needed' . "\n";
   exit(1);
 }
 
-$exif = exif_read_data($source_path);
+$exif = exif_read_data($input);
 
 $data = [
-    'device'   => $exif['Make'] . ' ' . $exif['Model'],
-    'date'     => date('Y-m-d H:i:s', strtotime($exif['DateTimeOriginal'])),
-    'iso'      => $exif['ISOSpeedRatings'],
-    'aperture' => $exif['COMPUTED']['ApertureFNumber'],
-    'speed'    => $exif['ExposureTime'] . 's',
-    'focal'    => (!empty($exif['FocalLengthIn35mmFilm']) ? $exif['FocalLengthIn35mmFilm'] : calculateFocal($exif['FocalLength'])) . 'mm',
+  'device'   => $exif['Make'] . ' ' . $exif['Model'],
+  'date'     => date('Y-m-d H:i:s', strtotime($exif['DateTimeOriginal'])),
+  'iso'      => $exif['ISOSpeedRatings'],
+  'aperture' => $exif['COMPUTED']['ApertureFNumber'],
+  'speed'    => $exif['ExposureTime'] . 's',
+  'focal'    => (!empty($exif['FocalLengthIn35mmFilm']) ? $exif['FocalLengthIn35mmFilm'] : calculateFocal($exif['FocalLength'])) . 'mm',
 ];
 if (preg_match('#pentax k-5#i', $data['device']))
 {
