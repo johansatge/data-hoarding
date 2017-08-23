@@ -1,19 +1,71 @@
-# Conversion
+# Data Hoarding
 
+> A collection of scripts to organize and edit files
+
+## Dependencies
+
+* `ffmpeg`
+  * `brew install ffmpeg --with-libvidstab`
+* HandBrake
+  * Download [HandbrakeCLI](https://handbrake.fr)
+  * Install it under `/Applications/HandbrakeCLI`
+* `Node 8`
+
+## Stabilize a video
+
+Stabilize a video by using `ffmpeg` and `vidstab`.
+
+```shell
+Usage:
+$ php stabilize_video.php file.mp4 [--options]
+
+Options:
+--analyze            Perform the analysis step (generate a file.mp4.trf file)
+--stabilize          Stabilize the video by generating a file.stab.mp4 file (by using the trf file)
+--compare            Merge file.mp4 and file.stab.mp4 in file.compare.mp4
+--accuracy=[1-15]    Override accuracy value (vidstabdetect)
+--shakiness=[1-10]   Override shakiness value (vidstabdetect)
+--smoothing=[number] Override smoothing value (vidstabtransform)
 ```
-node convert_video.js /path/to/file1.mp4 /path/to/file2.mp4
+
+Resources:
+
+* [`vidstabdetect` documentation](https://ffmpeg.org/ffmpeg-filters.html#toc-vidstabdetect-1)
+* [`vidstabtransform` documentation](https://ffmpeg.org/ffmpeg-filters.html#toc-vidstabtransform-1)
+
+## Compress videos
+
+Compress one or multiple video(s) by using `HandbrakeCLI`.
+
+```shell
+Usage:
+$ node compress_video.js file1.mp4 file2.mp4 [--options]
+
+Options:
+--force-720p       Force output to 1280x720
+--fps=[number]     Force FPS (default is to stick to source)
+--quality=[number] Set x264 RF value (default is 25)
 ```
 
-* Re-encode a movie with a smaller size, and a little quality loss
-* Use the `--force-720p` option to force output to 1280x720
-* Use the `--quality=[number]` option to set a quality (default is 25)
-* Use the `--fps=[number]` option to force FPS (default is keep original)
+Resources:
 
-# Stats
+* [CRF Guide (Constant Rate Factor in x264 and x265)](http://slhck.info/video/2017/02/24/crf-guide.html)
 
+## Rename files by date
+
+Rename images and movies in a given directory, by date (`Y-M-D-H:i:s.ext`).
+
+```shell
+Usage:
+$ php name_medias.php /source/dir [--options]
+
+Options:
+--dry-run           Display results without renaming the files
+--strategy=[string] Choose a strategy to get the file date:
+                    exif_date      Use the DateTimeOriginal field from the EXIF
+                    creation_date  Use the file creation date
 ```
-node stats_video.js /path/to/a/folder > ~/Desktop/stats.csv
-```
 
-* Look for all video files in the given directory
-* Export a CSV file with stats about each file (framerate, size, duration...)
+Resources:
+
+* [EXIF Tags](https://sno.phy.queensu.ca/~phil/exiftool/TagNames/EXIF.html)

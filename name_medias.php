@@ -3,36 +3,36 @@
 array_shift($argv);
 $source_path = false;
 $dry_run = in_array('--dry-run', $argv);
-$help = in_array('--help', $argv);
+$strategy = false;
+$strategies = ['exif_date', 'creation_date'];
 foreach($argv as $arg)
 {
-  if (!in_array($arg, ['--dry-run', '--help']))
+  preg_match_all('#^--strategy=(' . implode('|', $strategies) . ')$#', $arg, $matches);
+  if (!empty($matches[1][0]))
+  {
+    $strategy = $matches[1][0];
+  }
+  else if (!in_array($arg, ['--dry-run']))
   {
     $source_path = $arg;
   }
 }
 
-if ($help || empty($source_path))
+if (empty($source_path) || empty($strategy))
 {
-  echo join("\n", [
-    str_repeat('-', 20),
-    'Usage:',
-    '$ php name_photos.php /source/folder',
-    'This will rename all images in the folder (Y-m-d-His format, non recursive)',
-    str_repeat('-', 20),
-  ]) . "\n";
+  echo 'Source and strategy needed' . "\n";
   exit(1);
 }
 
-RenameImages::exec($source_path, $dry_run);
+RenameMedias::exec($source_path, $strategy, $dry_run);
 
-class RenameImages
+class RenameMedias
 {
 
-  private static $extensions   = ['jpg', 'jpeg', 'JPG', 'JPEG', 'pef', 'PEF', 'rw2', 'RW2'];
+  private static $extensions   = ['jpg', 'jpeg', 'JPG', 'JPEG', 'pef', 'PEF', 'rw2', 'RW2', 'mp4', 'mov', 'MP4', 'MOV'];
   private static $renamedPaths = [];
 
-  public static function exec($source_path, $dry_run)
+  public static function exec($source_path, $strategy, $dry_run)
   {
     if (!is_readable($source_path) || !is_dir($source_path))
     {
@@ -45,7 +45,7 @@ class RenameImages
     $already_named = 0;
     foreach($paths as $path)
     {
-      $data = self::renameFile($path, $dry_run);
+      $data = self::renameFile($path, $strategy, $dry_run);
       echo $data['name'] . ' => ' . $data['updated_name'] . "\n";
       $duplicates += $data['is_duplicate'] ? 1 : 0;
       $errors += $data['is_error'] ? 1 : 0;
@@ -58,23 +58,20 @@ class RenameImages
     exit(0);
   }
 
-  private static function renameFile($path, $dry_run)
+  private static function renameFile($path, $strategy, $dry_run)
   {
     $is_error = false;
     $info = pathinfo($path);
     $ext = str_replace('jpeg', 'jpg', strtolower($info['extension']));
-    $exif = @exif_read_data($path);
-    if (!empty($exif['DateTimeOriginal']))
+
+    $new_filename = self::getFilenameByStrategy($path, $strategy);
+    if ($new_filename === false)
     {
-      $date = date('Y-m-d-His', strtotime($exif['DateTimeOriginal']));
-    }
-    else
-    {
-      $date = $info['filename'];
       $is_error = true;
+      $new_filename = $info['filename'];
     }
 
-    $updated_path = $info['dirname'] . '/' . $date . '.' . $ext;
+    $updated_path = $info['dirname'] . '/' . $new_filename . '.' . $ext;
 
     $is_duplicate = false;
     $is_already_named = false;
@@ -86,7 +83,7 @@ class RenameImages
     {
       $is_duplicate = true;
       $uniq = substr(md5_file($path), 0, 6);
-      $updated_path = $info['dirname'] . '/' . $date . '_' . $uniq . '.' . $ext;
+      $updated_path = $info['dirname'] . '/' . $new_filename . '_' . $uniq . '.' . $ext;
     }
 
     if (!$dry_run && !$is_already_named)
@@ -101,6 +98,24 @@ class RenameImages
       'is_error'         => $is_error,
       'is_already_named' => $is_already_named,
     ];
+  }
+
+  private static function getFilenameByStrategy($path, $strategy)
+  {
+    if ($strategy === 'exif_date')
+    {
+      $exif = @exif_read_data($path);
+      if (!empty($exif['DateTimeOriginal']))
+      {
+        return date('Y-m-d-His', strtotime($exif['DateTimeOriginal']));
+      }
+      return false;
+    }
+    if ($strategy === 'creation_date')
+    {
+      $time = filemtime($path);
+      return !empty($time) ? date('Y-m-d-His', $time) : false;
+    }
   }
 
   private static function getFilename($path)
