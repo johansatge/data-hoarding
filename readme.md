@@ -45,7 +45,7 @@ Compress one or multiple video(s) by using `HandbrakeCLI`.
 
 ```shell
 Usage:
-$ node compress_video.js file1.mp4 file2.mp4 [--options]
+$ node compress_video.php file1.mp4 file2.mp4 [--options]
 
 Options:
 --force-720p       Force output to 1280x720
@@ -68,8 +68,10 @@ $ php name_medias.php /source/dir [--options]
 Options:
 --dry-run           Display results without renaming the files
 --strategy=[string] Choose a strategy to get the file date:
-                    exif_date      Use the DateTimeOriginal field from the EXIF
-                    creation_date  Use the file creation date
+                    exif_date            Use the DateTimeOriginal field from the EXIF
+                    creation_date        Use the file creation date
+                    movie_creation_date  Use the movie creation date
+                                         (extracted from the metadata with ffprobe)
 ```
 
 Resources:

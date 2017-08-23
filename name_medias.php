@@ -3,10 +3,11 @@
 require('parse_argv.php');
 $args = parse_argv();
 $input = count($args['_']) > 0 ? $args['_'][0] : '';
-$strategy = !empty($args['strategy']) && in_array(['exif_date', 'creation_date'], $args['strategy']) ? $args['strategy'] : false;
+$strategies = ['exif_date', 'creation_date', 'movie_creation_date'];
+$strategy = !empty($args['strategy']) && in_array($args['strategy'], $strategies) ? $args['strategy'] : false;
 $dry_run = !empty($args['dry-run']);
 
-if (empty($input) || $strategy)
+if (empty($input) || empty($strategy))
 {
   echo 'Source and strategy needed' . "\n";
   exit(1);
@@ -97,13 +98,25 @@ class RenameMedias
       {
         return date('Y-m-d-His', strtotime($exif['DateTimeOriginal']));
       }
-      return false;
     }
-    if ($strategy === 'creation_date')
+    else if ($strategy === 'creation_date')
     {
       $time = filemtime($path);
       return !empty($time) ? date('Y-m-d-His', $time) : false;
     }
+    else if ($strategy === 'movie_creation_date')
+    {
+      exec('ffprobe ' . $path . ' 2>&1', $stdout_lines);
+      foreach($stdout_lines as $line)
+      {
+        preg_match_all('#creation_time *: *([0-9\-A-Z:.]+)#', $line, $matches);
+        if (!empty($matches[1][0]))
+        {
+          return date('Y-m-d-His', strtotime($matches[1][0]));
+        }
+      }
+    }
+    return false;
   }
 
   private static function getFilename($path)

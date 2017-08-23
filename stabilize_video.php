@@ -48,17 +48,17 @@ class StabilizeVideo
     }
     if ($this->doAnalyze)
     {
-      $command = 'ffmpeg -i %s -vf vidstabdetect=result="%s":shakiness=%i:accuracy=%i -f null -';
+      $command = 'ffmpeg -i "%s" -vf vidstabdetect=result="%s":shakiness=%d:accuracy=%d -f null -';
       $this->execCommand(sprintf($command, $this->path, $this->pathAnalyze, $this->shakiness, $this->accuracy));
     }
     if ($this->doStabilize)
     {
-      $command = 'ffmpeg -i %s -vf vidstabtransform=smoothing=%i:input="%s" %s';
+      $command = 'ffmpeg -i "%s" -vf vidstabtransform=smoothing=%d:input="%s" %s';
       $this->execCommand(sprintf($command, $this->path, $this->smoothing, $this->pathAnalyze, $this->pathStabilize));
     }
     if ($this->doCompare)
     {
-      $command = 'ffmpeg -i %s -i %s -filter_complex "[0:v:0]pad=iw*2:ih[bg]; [bg][1:v:0]overlay=w" %s';
+      $command = 'ffmpeg -i "%s" -i "%s" -filter_complex "[0:v:0]pad=iw*2:ih[bg]; [bg][1:v:0]overlay=w" %s';
       $this->execCommand(sprintf($command, $this->path, $this->pathStabilize, $this->pathCompare));
     }
     exit(0);
@@ -69,9 +69,9 @@ class StabilizeVideo
     $stream = popen($command, 'r');
     while (!feof($stream))
     {
-      echo fread($stream, 1024);
+      echo fread($stream, 4096);
       flush();
     }
-    fclose($stream);
+    pclose($stream);
   }
 }
