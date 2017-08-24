@@ -2,33 +2,25 @@
 
 require('parse_argv.php');
 $args = parse_argv();
-$input = count($args['_']) > 0 ? $args['_'][0] : '';
 $strategies = ['exif_date', 'creation_date', 'movie_creation_date'];
 $strategy = !empty($args['strategy']) && in_array($args['strategy'], $strategies) ? $args['strategy'] : false;
 $dry_run = !empty($args['dry-run']);
 
-if (empty($input) || empty($strategy))
+if (count($args['_']) === 0 || empty($strategy))
 {
   echo 'Source and strategy needed' . "\n";
   exit(1);
 }
 
-RenameMedias::exec($input, $strategy, $dry_run);
+RenameMedias::exec($args['_'], $strategy, $dry_run);
 
 class RenameMedias
 {
 
-  private static $extensions   = ['jpg', 'jpeg', 'JPG', 'JPEG', 'pef', 'PEF', 'rw2', 'RW2', 'mp4', 'mov', 'MP4', 'MOV'];
-  private static $renamedPaths = [];
+  private static $updatedPaths = [];
 
-  public static function exec($source_path, $strategy, $dry_run)
+  public static function exec($paths, $strategy, $dry_run)
   {
-    if (!is_readable($source_path) || !is_dir($source_path))
-    {
-      echo 'Directory not readable (' . $source_path . ')';
-      exit(1);
-    }
-    $paths = glob(rtrim($source_path, '/') . '/*.{' . implode(',', self::$extensions) . '}', GLOB_BRACE);
     $duplicates = 0;
     $errors = 0;
     $already_named = 0;
@@ -68,7 +60,7 @@ class RenameMedias
     {
       $is_already_named = true;
     }
-    else if (is_readable($updated_path))
+    else if (is_readable($updated_path) || in_array($updated_path, self::$updatedPaths))
     {
       $is_duplicate = true;
       $uniq = substr(md5_file($path), 0, 6);
@@ -79,6 +71,8 @@ class RenameMedias
     {
       rename($path, $updated_path);
     }
+
+    self::$updatedPaths[] = $updated_path;
 
     return [
       'name'             => self::getFilename($path),

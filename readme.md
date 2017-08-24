@@ -6,16 +6,19 @@
 * [Stabilize a video](#stabilize-a-video)
 * [Compress images](#compress-images)
 * [Compress videos](#compress-videos)
-* [Rename files by date](#rename-files-by-date)
+* [Rename media files by date](#rename-media-files-by-date)
 * [Extract EXIF data from a picture](#extract-exif-data-from-a-picture)
 
 ## Dependencies
 
 * `ffmpeg`
   * `brew install ffmpeg --with-libvidstab`
+* `jpegoptim`
+  * `brew install jpegoptim`
 * HandBrake
   * Download [HandbrakeCLI](https://handbrake.fr)
   * Install it under `/Applications/HandbrakeCLI`
+
 
 ## Stabilize a video
 
@@ -70,13 +73,13 @@ Resources:
 
 * [CRF Guide (Constant Rate Factor in x264 and x265)](http://slhck.info/video/2017/02/24/crf-guide.html)
 
-## Rename files by date
+## Rename media files by date
 
-Rename images and movies in a given directory, by date (`Y-M-D-H:i:s.ext`).
+Rename images and movies by date (`Y-M-D-H:i:s.ext`).
 
 ```shell
 Usage:
-$ php name_medias.php /source/dir [--options]
+$ php rename_media.php file1.jpg file2.jpg [--options]
 
 Options:
 --dry-run           Display results without renaming the files
