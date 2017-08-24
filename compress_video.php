@@ -42,7 +42,7 @@ foreach($args['_'] as $path)
     $command .= ' ' . $param . ' ' . $value;
   }
   $start_time = time();
-  $stream = popen($command, 'r');
+  $stream = popen($command . ' 2>&1', 'r');
   while (!feof($stream))
   {
     echo fread($stream, 4096);

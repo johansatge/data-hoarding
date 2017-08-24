@@ -4,6 +4,7 @@
 
 * [Dependencies](#dependencies)
 * [Stabilize a video](#stabilize-a-video)
+* [Compress images](#compress-images)
 * [Compress videos](#compress-videos)
 * [Rename files by date](#rename-files-by-date)
 * [Extract EXIF data from a picture](#extract-exif-data-from-a-picture)
@@ -38,13 +39,26 @@ Resources:
 * [`vidstabdetect` documentation](https://ffmpeg.org/ffmpeg-filters.html#toc-vidstabdetect-1)
 * [`vidstabtransform` documentation](https://ffmpeg.org/ffmpeg-filters.html#toc-vidstabtransform-1)
 
+## Compress images
+
+Compress one or multiple jpeg(s) by using `jpegoptim` (quality 85%), without stripping tags.
+
+```shell
+Usage:
+$ php compress_image.php file1.mp4 file2.mp4
+```
+
+Resources:
+
+* [`jpegoptim` on GitHub](https://github.com/tjko/jpegoptim)
+
 ## Compress videos
 
 Compress one or multiple video(s) by using `HandbrakeCLI`.
 
 ```shell
 Usage:
-$ node compress_video.php file1.mp4 file2.mp4 [--options]
+$ php compress_video.php file1.mp4 file2.mp4 [--options]
 
 Options:
 --force-720p       Force output to 1280x720
