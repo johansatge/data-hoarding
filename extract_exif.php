@@ -24,7 +24,6 @@ if (preg_match('#pentax k-5#i', $data['device']))
 {
   $data['device'] = 'Pentax K-5';
 }
-$data['instagram'] = getInstagram($data);
 echo json_encode($data, JSON_PRETTY_PRINT);
 
 function calculateFocal($value)
@@ -35,16 +34,4 @@ function calculateFocal($value)
     return intval($matches[1][0]) / intval($matches[2][0]);
   }
   return $value;
-}
-
-function getInstagram($data)
-{
-  return implode("\n", [
-    '📷  ' . $data['device'],
-    '📅  ' . date('Y-m-d', strtotime($data['date'])),
-    '☀️  ' . $data['iso'] . ' ISO',
-    '👓  ' . $data['aperture'],
-    '⏱  ' . $data['speed'],
-    '🔭  ' . $data['focal'],
-  ]);
 }
