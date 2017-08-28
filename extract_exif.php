@@ -4,19 +4,17 @@ require('parse_argv.php');
 $args = parse_argv();
 $input = count($args['_']) > 0 ? $args['_'][0] : '';
 
-if ($args['help'])
+if (!empty($args['help']) || empty($input))
 {
   echo implode("\n", [
+    str_repeat('-', 30),
+    'Extract EXIF data from a picture and print it as a JSON file',
+    str_repeat('-', 30),
     'Usage:',
     '$ extract_exif picture.jpg > exif.json',
+    str_repeat('-', 30),
   ]) . "\n";
   exit(0);
-}
-
-if (empty($input))
-{
-  echo 'Source file needed' . "\n";
-  exit(1);
 }
 
 $exif = exif_read_data($input);

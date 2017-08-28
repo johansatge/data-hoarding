@@ -3,19 +3,17 @@
 require('parse_argv.php');
 $args = parse_argv();
 
-if ($args['help'])
+if (!empty($args['help']) || count($args['_']) === 0)
 {
   echo implode("\n", [
+    str_repeat('-', 30),
+    'Compress JPEG images in place, without stripping EXIF tags',
+    str_repeat('-', 30),
     'Usage:',
     '$ compress_image file1.jpg file2.jpg',
+    str_repeat('-', 30),
   ]) . "\n";
   exit(0);
-}
-
-if (count($args['_']) === 0)
-{
-  echo 'At least one source file needed' . "\n";
-  exit(1);
 }
 
 $command = 'jpegoptim --max=85 --strip-none --totals ' . implode(' ', $args['_']);

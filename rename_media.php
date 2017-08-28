@@ -6,12 +6,15 @@ $strategies = ['exif_date', 'creation_date', 'movie_creation_date'];
 $strategy = !empty($args['strategy']) && in_array($args['strategy'], $strategies) ? $args['strategy'] : false;
 $dry_run = !empty($args['dry-run']);
 
-if ($args['help'])
+if (!empty($args['help']) || count($args['_']) === 0 || empty($strategy))
 {
   echo implode("\n", [
+    str_repeat('-', 30),
+    'Rename images and movies by date (Y-M-D-H:i:s.ext)',
+    str_repeat('-', 30),
     'Usage:',
     '$ rename_media file1.jpg file2.jpg [--options]',
-    '',
+    str_repeat('-', 30),
     'Options:',
     '--dry-run           Display results without renaming the files',
     '--strategy=[string] Choose a strategy to get the file date:',
@@ -19,14 +22,9 @@ if ($args['help'])
     '                    creation_date        Use the file creation date',
     '                    movie_creation_date  Use the movie creation date',
     '                                         (extracted from the metadata with ffprobe)',
+    str_repeat('-', 30),
   ]) . "\n";
   exit(0);
-}
-
-if (count($args['_']) === 0 || empty($strategy))
-{
-  echo 'Source and strategy needed' . "\n";
-  exit(1);
 }
 
 RenameMedias::exec($args['_'], $strategy, $dry_run);

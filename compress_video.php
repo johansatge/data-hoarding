@@ -4,24 +4,22 @@ require('parse_argv.php');
 $args = parse_argv();
 $output = [];
 
-if ($args['help'])
+if (!empty($args['help']) || count($args['_']) === 0)
 {
   echo implode("\n", [
+    str_repeat('-', 30),
+    'Compress videos to H264/AAC (will save file1.mp4 to file1.out.mp4)',
+    str_repeat('-', 30),
     'Usage:',
     '$ compress_video file1.mp4 file2.mp4 [--options]',
-    '',
+    str_repeat('-', 30),
     'Options:',
     '--force-720p       Force output to 1280x720',
     '--fps=[number]     Force FPS (default is to stick to source)',
     '--quality=[number] Set x264 RF value (default is 25)',
+    str_repeat('-', 30),
   ]) . "\n";
   exit(0);
-}
-
-if (count($args['_']) === 0)
-{
-  echo 'At least one source file needed' . "\n";
-  exit(1);
 }
 
 foreach($args['_'] as $path)

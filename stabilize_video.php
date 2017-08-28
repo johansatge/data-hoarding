@@ -4,12 +4,15 @@ require('parse_argv.php');
 $args = parse_argv();
 $input = count($args['_']) > 0 ? $args['_'][0] : '';
 
-if ($args['help'])
+if (!empty($args['help']) || empty($input))
 {
   echo implode("\n", [
+    str_repeat('-', 30),
+    'Stabilize a video by using ffmpeg and vidstab (save file.mp4 to file.mp4.trf|file.stab.mp4|file.compare.mp4)',
+    str_repeat('-', 30),
     'Usage:',
     '$ stabilize_video file.mp4 [--options]',
-    '',
+    str_repeat('-', 30),
     'Options:',
     '--analyze            Perform the analysis step (generate a file.mp4.trf file)',
     '--stabilize          Stabilize the video by generating a file.stab.mp4 file (by using the trf file)',
@@ -17,6 +20,7 @@ if ($args['help'])
     '--accuracy=[1-15]    Override accuracy value (vidstabdetect)',
     '--shakiness=[1-10]   Override shakiness value (vidstabdetect)',
     '--smoothing=[number] Override smoothing value (vidstabtransform)',
+    str_repeat('-', 30),
   ]) . "\n";
   exit(0);
 }
@@ -58,11 +62,6 @@ class StabilizeVideo
 
   public function do()
   {
-    if (empty($this->path))
-    {
-      echo 'Input file needed' . "\n";
-      exit(1);
-    }
     if ($this->doAnalyze)
     {
       $command = 'ffmpeg -i "%s" -vf vidstabdetect=result="%s":shakiness=%d:accuracy=%d -f null -';
