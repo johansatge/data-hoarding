@@ -3,6 +3,15 @@
 require('parse_argv.php');
 $args = parse_argv();
 
+if ($args['help'])
+{
+  echo implode("\n", [
+    'Usage:',
+    '$ compress_image file1.jpg file2.jpg',
+  ]) . "\n";
+  exit(0);
+}
+
 if (count($args['_']) === 0)
 {
   echo 'At least one source file needed' . "\n";

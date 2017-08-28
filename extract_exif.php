@@ -4,6 +4,15 @@ require('parse_argv.php');
 $args = parse_argv();
 $input = count($args['_']) > 0 ? $args['_'][0] : '';
 
+if ($args['help'])
+{
+  echo implode("\n", [
+    'Usage:',
+    '$ extract_exif picture.jpg > exif.json',
+  ]) . "\n";
+  exit(0);
+}
+
 if (empty($input))
 {
   echo 'Source file needed' . "\n";

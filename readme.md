@@ -3,6 +3,7 @@
 > A collection of scripts to organize and edit files
 
 * [Dependencies](#dependencies)
+* [Installation](#installation)
 * [Stabilize a video](#stabilize-a-video)
 * [Compress images](#compress-images)
 * [Compress videos](#compress-videos)
@@ -19,22 +20,29 @@
   * Download [HandbrakeCLI](https://handbrake.fr)
   * Install it under `/Applications/HandbrakeCLI`
 
+## Installation
+
+Clone the project:
+
+```shell
+git clone git@github.com:johansatge/data-hoarding.git
+```
+
+Source the aliases in the shell (in `~/.zshrc` for instance):
+
+```shell
+export DATA_HOARDING_PATH="/path/to/data-hoarding"
+. ${DATA_HOARDING_PATH}/aliases.sh
+```
+
+_Note: the `DATA_HOARDING_PATH` var is mandatory, it is used in `aliases.sh`._
 
 ## Stabilize a video
 
 Stabilize a video by using `ffmpeg` and `vidstab`.
 
 ```shell
-Usage:
-$ php stabilize_video.php file.mp4 [--options]
-
-Options:
---analyze            Perform the analysis step (generate a file.mp4.trf file)
---stabilize          Stabilize the video by generating a file.stab.mp4 file (by using the trf file)
---compare            Merge file.mp4 and file.stab.mp4 in file.compare.mp4
---accuracy=[1-15]    Override accuracy value (vidstabdetect)
---shakiness=[1-10]   Override shakiness value (vidstabdetect)
---smoothing=[number] Override smoothing value (vidstabtransform)
+$ stabilize_video --help
 ```
 
 Resources:
@@ -47,8 +55,7 @@ Resources:
 Compress one or multiple jpeg(s) by using `jpegoptim` (quality 85%), without stripping tags.
 
 ```shell
-Usage:
-$ php compress_image.php file1.mp4 file2.mp4
+$ compress_image --help
 ```
 
 Resources:
@@ -60,13 +67,7 @@ Resources:
 Compress one or multiple video(s) by using `HandbrakeCLI`.
 
 ```shell
-Usage:
-$ php compress_video.php file1.mp4 file2.mp4 [--options]
-
-Options:
---force-720p       Force output to 1280x720
---fps=[number]     Force FPS (default is to stick to source)
---quality=[number] Set x264 RF value (default is 25)
+$ php compress_video --help
 ```
 
 Resources:
@@ -78,16 +79,7 @@ Resources:
 Rename images and movies by date (`Y-M-D-H:i:s.ext`).
 
 ```shell
-Usage:
-$ php rename_media.php file1.jpg file2.jpg [--options]
-
-Options:
---dry-run           Display results without renaming the files
---strategy=[string] Choose a strategy to get the file date:
-                    exif_date            Use the DateTimeOriginal field from the EXIF
-                    creation_date        Use the file creation date
-                    movie_creation_date  Use the movie creation date
-                                         (extracted from the metadata with ffprobe)
+$ rename_media --help
 ```
 
 Resources:
@@ -99,6 +91,5 @@ Resources:
 Extract EXIF data from a picture and print it as a JSON file in `stdout`.
 
 ```
-Usage:
-$ php extract_exif.php picture.jpg > exif.json
+$ extract_exif --help
 ```

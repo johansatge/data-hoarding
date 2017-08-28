@@ -6,6 +6,23 @@ $strategies = ['exif_date', 'creation_date', 'movie_creation_date'];
 $strategy = !empty($args['strategy']) && in_array($args['strategy'], $strategies) ? $args['strategy'] : false;
 $dry_run = !empty($args['dry-run']);
 
+if ($args['help'])
+{
+  echo implode("\n", [
+    'Usage:',
+    '$ rename_media file1.jpg file2.jpg [--options]',
+    '',
+    'Options:',
+    '--dry-run           Display results without renaming the files',
+    '--strategy=[string] Choose a strategy to get the file date:',
+    '                    exif_date            Use the DateTimeOriginal field from the EXIF',
+    '                    creation_date        Use the file creation date',
+    '                    movie_creation_date  Use the movie creation date',
+    '                                         (extracted from the metadata with ffprobe)',
+  ]) . "\n";
+  exit(0);
+}
+
 if (count($args['_']) === 0 || empty($strategy))
 {
   echo 'Source and strategy needed' . "\n";

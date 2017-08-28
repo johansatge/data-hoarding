@@ -4,6 +4,23 @@ require('parse_argv.php');
 $args = parse_argv();
 $input = count($args['_']) > 0 ? $args['_'][0] : '';
 
+if ($args['help'])
+{
+  echo implode("\n", [
+    'Usage:',
+    '$ stabilize_video file.mp4 [--options]',
+    '',
+    'Options:',
+    '--analyze            Perform the analysis step (generate a file.mp4.trf file)',
+    '--stabilize          Stabilize the video by generating a file.stab.mp4 file (by using the trf file)',
+    '--compare            Merge file.mp4 and file.stab.mp4 in file.compare.mp4',
+    '--accuracy=[1-15]    Override accuracy value (vidstabdetect)',
+    '--shakiness=[1-10]   Override shakiness value (vidstabdetect)',
+    '--smoothing=[number] Override smoothing value (vidstabtransform)',
+  ]) . "\n";
+  exit(0);
+}
+
 $stab = new StabilizeVideo($input, $args);
 $stab->do();
 

@@ -4,6 +4,20 @@ require('parse_argv.php');
 $args = parse_argv();
 $output = [];
 
+if ($args['help'])
+{
+  echo implode("\n", [
+    'Usage:',
+    '$ compress_video file1.mp4 file2.mp4 [--options]',
+    '',
+    'Options:',
+    '--force-720p       Force output to 1280x720',
+    '--fps=[number]     Force FPS (default is to stick to source)',
+    '--quality=[number] Set x264 RF value (default is 25)',
+  ]) . "\n";
+  exit(0);
+}
+
 if (count($args['_']) === 0)
 {
   echo 'At least one source file needed' . "\n";
