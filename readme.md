@@ -3,35 +3,16 @@
 > A collection of scripts to organize and edit files
 
 * [Installation](#installation)
-* [Compress images](#compress-images)
-* [Compress videos](#compress-videos)
-* [Rename media files by date](#rename-media-files-by-date)
-* [Stabilize a video](#stabilize-a-video)
-* [Extract EXIF data from a picture](#extract-exif-data-from-a-picture)
+* [Scripts](#compress-images)
 
 ## Installation
 
-Install `ffmpeg`:
+* Install `ffmpeg`: `brew install ffmpeg --with-libvidstab`
+* Install `jpegoptim`: `brew install jpegoptim`
+* Clone the project: `git clone git@github.com:johansatge/data-hoarding.git`
+* Download [HandbrakeCLI](https://handbrake.fr) and install it under `/Applications/HandbrakeCLI`
 
-```shell
-brew install ffmpeg --with-libvidstab`
-```
-
-Install `jpegoptim`:
-
-```
-brew install jpegoptim
-```
-
-Download [HandbrakeCLI](https://handbrake.fr) and install it under `/Applications/HandbrakeCLI`.
-
-Clone the project:
-
-```shell
-git clone git@github.com:johansatge/data-hoarding.git
-```
-
-Source the aliases in the shell (in `~/.zshrc` for instance):
+Then, source the aliases in the shell (in `~/.zshrc` for instance):
 
 ```shell
 export DATA_HOARDING_PATH="/path/to/data-hoarding"
@@ -40,32 +21,17 @@ export DATA_HOARDING_PATH="/path/to/data-hoarding"
 
 _Note: the `DATA_HOARDING_PATH` var is mandatory, it is used in `aliases.sh`._
 
-## Compress images
+## Scripts
 
 ```shell
+# Compress JPEG images
 compress_image --help
-```
-
-## Compress videos
-
-```shell
+# Compress videos
 compress_video --help
-```
-
-## Rename media files by date
-
-```shell
-rename_media --help
-```
-
-## Stabilize a video
-
-```shell
-stabilize_video --help
-```
-
-## Extract EXIF data from a picture
-
-```
+# Extract EXIF data from an image
 extract_exif --help
+# Rename images and videos by date
+rename_media --help
+# Stabilize a video
+stabilize_video --help
 ```
