@@ -24,7 +24,7 @@ if (!empty($args['help']) || count($args['_']) === 0)
 
 foreach($args['_'] as $path)
 {
-  $dest_path = preg_replace('#\.([^.]+)$#i', '.out.$1', $path);
+  $dest_path = preg_replace('#\.([^.]+)$#i', '.out.mp4', $path);
   $params = [
     '--input'        => '"' . $path . '"',
     '--output'       => '"' . $dest_path . '"',
