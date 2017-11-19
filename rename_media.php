@@ -1,5 +1,7 @@
 <?php
 
+date_default_timezone_set('Europe/Paris');
+
 require('parse_argv.php');
 $args = parse_argv();
 $strategies = ['exif_date', 'creation_date', 'movie_creation_date'];

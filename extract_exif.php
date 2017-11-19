@@ -1,5 +1,7 @@
 <?php
 
+date_default_timezone_set('Europe/Paris');
+
 require('parse_argv.php');
 $args = parse_argv();
 $input = count($args['_']) > 0 ? $args['_'][0] : '';
