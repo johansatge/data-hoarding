@@ -28,7 +28,7 @@ if (!empty($args['help']) || empty($input))
 }
 
 $stab = new StabilizeVideo($input, $args);
-$stab->do();
+$stab->execute();
 
 class StabilizeVideo
 {
@@ -62,7 +62,7 @@ class StabilizeVideo
     $this->pathCompare = preg_replace('#\.(mov|mp4)$#i', '.compare.$1', $this->path);
   }
 
-  public function do()
+  public function execute()
   {
     if ($this->doAnalyze)
     {
@@ -71,12 +71,12 @@ class StabilizeVideo
     }
     if ($this->doStabilize)
     {
-      $command = 'ffmpeg -i "%s" -vf vidstabtransform=smoothing=%d:input="%s" %s';
+      $command = 'ffmpeg -i "%s" -vf vidstabtransform=smoothing=%d:input="%s" "%s"';
       $this->execCommand(sprintf($command, $this->path, $this->smoothing, $this->pathAnalyze, $this->pathStabilize));
     }
     if ($this->doCompare)
     {
-      $command = 'ffmpeg -i "%s" -i "%s" -filter_complex "[0:v:0]pad=iw*2:ih[bg]; [bg][1:v:0]overlay=w" %s';
+      $command = 'ffmpeg -i "%s" -i "%s" -filter_complex "[0:v:0]pad=iw*2:ih[bg]; [bg][1:v:0]overlay=w" "%s"';
       $this->execCommand(sprintf($command, $this->path, $this->pathStabilize, $this->pathCompare));
     }
     exit(0);
