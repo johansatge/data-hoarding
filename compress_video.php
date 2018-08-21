@@ -10,7 +10,7 @@ if (!empty($args['help']) || count($args['_']) === 0)
 {
   echo implode("\n", [
     str_repeat('-', 30),
-    'Compress videos to H264/AAC (will save file1.mp4 to file1.out.mp4)',
+    'Compress videos to H264/AAC (will save to file1.mp4 and keep original in file1.orig.mp4)',
     str_repeat('-', 30),
     'Usage:',
     '$ compress_video file1.mp4 file2.mp4 [--options]',
@@ -27,6 +27,7 @@ if (!empty($args['help']) || count($args['_']) === 0)
 foreach($args['_'] as $path)
 {
   $dest_path = preg_replace('#\.([^.]+)$#i', '.out.mp4', $path);
+  $orig_path = preg_replace('#\.([^.]+)$#i', '.orig.$1', $path);
   $params = [
     '--input'        => '"' . $path . '"',
     '--output'       => '"' . $dest_path . '"',
@@ -68,6 +69,8 @@ foreach($args['_'] as $path)
   $output[] = 'Original filesize: ' . round(filesize($path) / 1000 / 1000, 2) . 'M';
   $output[] = 'New filesize:      ' . round(filesize($dest_path) / 1000 / 1000, 2) . 'M';
   $output[] = str_repeat('-', 20);
+  rename($path, $orig_path);
+  rename($dest_path, preg_replace('#\.out\.mp4$#', '.mp4', $dest_path));
 }
 foreach($output as $line)
 {
