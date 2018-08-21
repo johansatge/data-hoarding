@@ -9,7 +9,7 @@ if (!empty($args['help']) || count($args['_']) === 0)
 {
   echo implode("\n", [
     str_repeat('-', 30),
-    'Compress JPEG images in place, without stripping EXIF tags',
+    'Compress JPEG images in place (85%) without stripping EXIF tags',
     str_repeat('-', 30),
     'Usage:',
     '$ compress_image file1.jpg file2.jpg',
@@ -18,7 +18,7 @@ if (!empty($args['help']) || count($args['_']) === 0)
   exit(0);
 }
 
-$command = 'jpegoptim --max=85 --strip-none --totals ' . implode(' ', $args['_']);
+$command = 'jpegoptim --max=85 --strip-none --totals "' . implode('" "', $args['_']) . '"';
 $stream = popen($command . ' 2>&1', 'r');
 while (!feof($stream))
 {
