@@ -4,7 +4,7 @@ date_default_timezone_set('Europe/Paris');
 
 require('parse_argv.php');
 $args = parse_argv();
-$strategies = ['exif_date', 'creation_date', 'movie_creation_date'];
+$strategies = ['exif_date', 'creation_date', 'video_creation_date', 'oneplus_media'];
 $strategy = !empty($args['strategy']) && in_array($args['strategy'], $strategies) ? $args['strategy'] : false;
 $dry_run = !empty($args['dry-run']);
 
@@ -22,8 +22,9 @@ if (!empty($args['help']) || count($args['_']) === 0 || empty($strategy))
     '--strategy=[string] Choose a strategy to get the file date:',
     '                    exif_date            Use the DateTimeOriginal field from the EXIF',
     '                    creation_date        Use the file creation date',
-    '                    movie_creation_date  Use the movie creation date',
+    '                    video_creation_date  Use the movie creation date',
     '                                         (extracted from the metadata with ffprobe)',
+    '                    oneplus_media        Use the name of the file (VID_20180413_115301.mp4, IMG_20180418_143440.jpg)',
     str_repeat('-', 30),
   ]) . "\n";
   exit(0);
@@ -115,7 +116,7 @@ class RenameMedias
       $time = filemtime($path);
       return !empty($time) ? date('Y-m-d-His', $time) : false;
     }
-    else if ($strategy === 'movie_creation_date')
+    else if ($strategy === 'video_creation_date')
     {
       exec('ffprobe ' . $path . ' 2>&1', $stdout_lines);
       foreach($stdout_lines as $line)
@@ -126,6 +127,11 @@ class RenameMedias
           return date('Y-m-d-His', strtotime($matches[1][0]));
         }
       }
+    }
+    else if ($strategy === 'oneplus_media')
+    {
+      $filename = self::getFilename($path);
+      return preg_replace('#^(VID_|IMG_)([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]+).(mp4|jpg)$#', '$2-$3-$4-$5', $filename);
     }
     return false;
   }
