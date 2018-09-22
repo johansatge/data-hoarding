@@ -4,7 +4,7 @@ date_default_timezone_set('Europe/Paris');
 
 require('parse_argv.php');
 $args = parse_argv();
-$strategies = ['exif_date', 'creation_date', 'video_creation_date', 'oneplus_media'];
+$strategies = ['exif_date', 'creation_date', 'video_creation_date', 'oneplus_media', 'mp3_duration'];
 $strategy = !empty($args['strategy']) && in_array($args['strategy'], $strategies) ? $args['strategy'] : false;
 $dry_run = !empty($args['dry-run']);
 
@@ -25,6 +25,7 @@ if (!empty($args['help']) || count($args['_']) === 0 || empty($strategy))
     '                    video_creation_date  Use the movie creation date',
     '                                         (extracted from the metadata with ffprobe)',
     '                    oneplus_media        Use the name of the file (VID_20180413_115301.mp4, IMG_20180418_143440.jpg)',
+    '                    mp3_duration         Append the duration of the mp3 audio to the filename',
     str_repeat('-', 30),
   ]) . "\n";
   exit(0);
@@ -118,7 +119,7 @@ class RenameMedias
     }
     else if ($strategy === 'video_creation_date')
     {
-      exec('ffprobe ' . $path . ' 2>&1', $stdout_lines);
+      exec('ffprobe "' . $path . '" 2>&1', $stdout_lines);
       foreach($stdout_lines as $line)
       {
         preg_match_all('#creation_time *: *([0-9\-A-Z:.]+)#', $line, $matches);
@@ -132,6 +133,19 @@ class RenameMedias
     {
       $filename = self::getFilename($path);
       return preg_replace('#^(VID_|IMG_)([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]+).(mp4|jpg)$#', '$2-$3-$4-$5', $filename);
+    }
+    else if ($strategy === 'mp3_duration')
+    {
+      $filename = self::getFilename($path);
+      exec('ffprobe "' . $path . '" 2>&1', $stdout_lines);
+      foreach($stdout_lines as $line)
+      {
+        preg_match('#Duration: ([0-9]+):([0-9]+):([0-9]+).([0-9]+),#', $line, $matches);
+        if (!empty($matches[2]) && !empty($matches[3]))
+        {
+          return str_replace('.mp3', ' (' . $matches[2] . '.' . $matches[3] . ')', $filename);
+        }
+      }
     }
     return false;
   }
