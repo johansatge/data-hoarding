@@ -29,6 +29,8 @@ _Note: the `DATA_HOARDING_PATH` var is mandatory, it is used in `aliases.sh`._
 compress_image --help
 # Compress videos
 compress_video --help
+# Compare videos
+compare_video --help
 # Extract EXIF data from an image
 extract_exif --help
 # Rename images and videos by date
