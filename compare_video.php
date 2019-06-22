@@ -26,8 +26,8 @@ $destVideo2 = rtrim($destPath, '/') . '/%04d_2.bmp';
 
 @mkdir($destPath, 0755, true);
 
-runCommand(sprintf('ffmpeg -i "%s" -vf fps=0.2 %s', $video1, $destVideo1));
-runCommand(sprintf('ffmpeg -i "%s" -vf fps=0.2 %s', $video2, $destVideo2));
+runCommand(sprintf('ffmpeg -i "%s" -vf fps=0.2 "%s"', $video1, $destVideo1));
+runCommand(sprintf('ffmpeg -i "%s" -vf fps=0.2 "%s"', $video2, $destVideo2));
 
 function runCommand($command)
 {
