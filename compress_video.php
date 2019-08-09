@@ -35,7 +35,7 @@ foreach($args['_'] as $path)
     '--encoder'      => 'x264',
     '--x264-preset'  => 'slow', // ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
     '--x264-profile' => 'high', // baseline, main, high, high10, high422, high444
-    '--x264-tune'    => 'film', // film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency
+    '--x264-tune'    => 'film', // none, film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency
     '--quality'      => !empty($args['quality']) ? intval($args['quality']) : 25,
     //'--encopts', 'vbv-maxrate=3000:vbv-bufsize=3000',
     '--audio'        => '1',
