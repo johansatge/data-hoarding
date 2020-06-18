@@ -41,33 +41,39 @@ class RenameMedias
   public static function exec($paths, $strategy, $dry_run)
   {
     $duplicates = 0;
-    $errors = 0;
+    $renamed = 0;
     $already_named = 0;
     foreach($paths as $path)
     {
       $data = self::renameFile($path, $strategy, $dry_run);
-      echo $data['name'] . ' => ' . $data['updated_name'] . "\n";
+      echo $data['name'] . ' => ' . $data['updated_name'] . ' ' . self::getEmoji($data) . "\n";
       $duplicates += $data['is_duplicate'] ? 1 : 0;
-      $errors += $data['is_error'] ? 1 : 0;
+      $renamed += $data['is_already_named'] ? 0 : 1;
       $already_named += $data['is_already_named'] ? 1 : 0;
     }
     echo count($paths) . ' files.' . ($dry_run ? ' (dry run)' : '') . "\n";
+    echo $renamed . ' renamed. (' . $duplicates . ' duplicates)' . "\n";
     echo $already_named . ' already named.' . "\n";
-    echo $duplicates . ' duplicates.' . "\n";
-    echo $errors . ' errors.' . "\n";
     exit(0);
+  }
+
+  private static function getEmoji($data)
+  {
+    if ($data['is_already_named'])
+    {
+      return '❎';
+    }
+    return $data['is_duplicate'] ? '⚠️' : '✅';
   }
 
   private static function renameFile($path, $strategy, $dry_run)
   {
-    $is_error = false;
     $info = pathinfo($path);
     $ext = str_replace('jpeg', 'jpg', strtolower($info['extension']));
 
     $new_filename = self::getFilenameByStrategy($path, $strategy);
     if ($new_filename === false)
     {
-      $is_error = true;
       $new_filename = $info['filename'];
     }
 
@@ -79,16 +85,22 @@ class RenameMedias
     {
       $is_already_named = true;
     }
-    else if (is_readable($updated_path) || in_array($updated_path, self::$updatedPaths))
+    else
     {
-      $is_duplicate = true;
-      $uniq = substr(md5_file($path), 0, 6);
-      $updated_path = $info['dirname'] . '/' . $new_filename . '_' . $uniq . '.' . $ext;
-    }
-
-    if (!$dry_run && !$is_already_named)
-    {
-      rename($path, $updated_path);
+      // When looking for duplicates, exclude files that have the same name before & after
+      // (it probably means we just rename the extension)
+      // We can't just rely on is_readable() because it's case insensitive on macOS,
+      // so it would generate a false posivite for IMG12345.JPG -> ING12345.jpg
+      if ($info['filename'] !== $new_filename && (is_readable($updated_path) || in_array($updated_path, self::$updatedPaths)))
+      {
+        $is_duplicate = true;
+        $uniq = substr(md5_file($path), 0, 6);
+        $updated_path = $info['dirname'] . '/' . $new_filename . '_' . $uniq . '.' . $ext;
+      }
+      if (!$dry_run)
+      {
+        rename($path, $updated_path);
+      }
     }
 
     self::$updatedPaths[] = $updated_path;
@@ -97,7 +109,6 @@ class RenameMedias
       'name'             => self::getFilename($path),
       'updated_name'     => self::getFilename($updated_path),
       'is_duplicate'     => $is_duplicate,
-      'is_error'         => $is_error,
       'is_already_named' => $is_already_named,
     ];
   }
@@ -107,7 +118,7 @@ class RenameMedias
     if ($strategy === 'exif_date')
     {
       $exif = @exif_read_data($path);
-      if (!empty($exif['DateTimeOriginal']))
+      if (!empty($exif['DateTimeOriginal']) && substr($exif['DateTimeOriginal'], 0, 4) !== '0000')
       {
         return date('Y-m-d-His', strtotime($exif['DateTimeOriginal']));
       }
