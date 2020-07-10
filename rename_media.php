@@ -4,8 +4,9 @@ date_default_timezone_set('Europe/Paris');
 
 require('parse_argv.php');
 $args = parse_argv();
-$strategies = ['exif_date', 'creation_date', 'video_creation_date', 'oneplus_media', 'mp3_duration'];
+$strategies = ['none', 'exif_date', 'creation_date', 'video_creation_date', 'oneplus_media', 'mp3_duration'];
 $strategy = !empty($args['strategy']) && in_array($args['strategy'], $strategies) ? $args['strategy'] : false;
+$suffix = !empty($args['suffix']) ? $args['suffix'] : false;
 $dry_run = !empty($args['dry-run']);
 
 if (!empty($args['help']) || count($args['_']) === 0 || empty($strategy))
@@ -20,32 +21,35 @@ if (!empty($args['help']) || count($args['_']) === 0 || empty($strategy))
     'Options:',
     '--dry-run           Display results without renaming the files',
     '--strategy=[string] Choose a strategy to get the file date:',
+    '                    none                 Keep the same filename',
+    '                                         Useful to add a suffix to existing files',
     '                    exif_date            Use the DateTimeOriginal field from the EXIF',
     '                    creation_date        Use the file creation date',
     '                    video_creation_date  Use the movie creation date',
     '                                         (extracted from the metadata with ffprobe)',
     '                    oneplus_media        Use the name of the file (VID_20180413_115301.mp4, IMG_20180418_143440.jpg)',
     '                    mp3_duration         Append the duration of the mp3 audio to the filename',
+    '--suffix=[string]   Add a suffix to the final filename',
     str_repeat('-', 30),
   ]) . "\n";
   exit(0);
 }
 
-RenameMedias::exec($args['_'], $strategy, $dry_run);
+RenameMedias::exec($args['_'], $strategy, $suffix, $dry_run);
 
 class RenameMedias
 {
 
   private static $updatedPaths = [];
 
-  public static function exec($paths, $strategy, $dry_run)
+  public static function exec($paths, $strategy, $suffix, $dry_run)
   {
     $duplicates = 0;
     $renamed = 0;
     $already_named = 0;
     foreach($paths as $path)
     {
-      $data = self::renameFile($path, $strategy, $dry_run);
+      $data = self::renameFile($path, $strategy, $suffix, $dry_run);
       echo $data['name'] . ' => ' . $data['updated_name'] . ' ' . self::getEmoji($data) . "\n";
       $duplicates += $data['is_duplicate'] ? 1 : 0;
       $renamed += $data['is_already_named'] ? 0 : 1;
@@ -66,7 +70,7 @@ class RenameMedias
     return $data['is_duplicate'] ? '⚠️' : '✅';
   }
 
-  private static function renameFile($path, $strategy, $dry_run)
+  private static function renameFile($path, $strategy, $suffix, $dry_run)
   {
     $info = pathinfo($path);
     $ext = str_replace('jpeg', 'jpg', strtolower($info['extension']));
@@ -76,6 +80,8 @@ class RenameMedias
     {
       $new_filename = $info['filename'];
     }
+
+    $new_filename .= $suffix !== false ? '-' . $suffix : '';
 
     $updated_path = $info['dirname'] . '/' . $new_filename . '.' . $ext;
 
@@ -115,6 +121,10 @@ class RenameMedias
 
   private static function getFilenameByStrategy($path, $strategy)
   {
+    if ($strategy === 'none')
+    {
+      return false;
+    }
     if ($strategy === 'exif_date')
     {
       $exif = @exif_read_data($path);
