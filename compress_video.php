@@ -19,6 +19,7 @@ if (!empty($args['help']) || count($args['_']) === 0)
     '--force-720p       Force output to 1280x720',
     '--fps=[number]     Force FPS (default is to stick to source)',
     '--quality=[number] Set x264 RF value (default is 25)',
+    '--no-audio Remove audio track',
     str_repeat('-', 30),
   ]) . "\n";
   exit(0);
@@ -33,12 +34,10 @@ foreach($args['_'] as $path)
     '--output'       => '"' . $dest_path . '"',
     '--format'       => 'av_mp4',
     '--encoder'      => 'x264',
-    '--x264-preset'  => 'slow', // ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
-    '--x264-profile' => 'high', // baseline, main, high, high10, high422, high444
-    '--x264-tune'    => 'film', // none, film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency
+    '--encoder-preset'  => 'slow', // ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
+    '--encoder-profile' => 'high', // auto, main, high
+    '--encoder-tune'    => 'film', // none, film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency
     '--quality'      => !empty($args['quality']) ? intval($args['quality']) : 25,
-    //'--encopts', 'vbv-maxrate=3000:vbv-bufsize=3000',
-    '--audio'        => '1',
     '--aencoder'     => 'ca_aac',
     '--ab'           => '112',
   ];
@@ -51,11 +50,18 @@ foreach($args['_'] as $path)
     $params['--width'] = 1280;
     $params['--height'] = 720;
   }
+  if (!empty($args['no-audio']))
+  {
+    $params['--audio'] = 'none';
+  }
   $command = '/Applications/HandbrakeCLI';
   foreach($params as $param => $value)
   {
     $command .= ' ' . $param . ' ' . $value;
   }
+  echo str_repeat('-', 20) . "\n";
+  echo 'Running ' . $command . "\n";
+  echo str_repeat('-', 20) . "\n";
   $start_time = time();
   $stream = popen($command . ' 2>&1', 'r');
   while (!feof($stream))
