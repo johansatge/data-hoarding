@@ -4,7 +4,7 @@ date_default_timezone_set('Europe/Paris');
 
 require('parse_argv.php');
 $args = parse_argv();
-$strategies = ['none', 'exif_date', 'creation_date', 'video_creation_date', 'oneplus_media', 'mp3_duration'];
+$strategies = ['none', 'exif_date', 'creation_date', 'video_creation_date', 'oneplus_media', 'samsung_media', 'mp3_duration'];
 $strategy = !empty($args['strategy']) && in_array($args['strategy'], $strategies) ? $args['strategy'] : false;
 $suffix = !empty($args['suffix']) ? $args['suffix'] : false;
 $dry_run = !empty($args['dry-run']);
@@ -28,6 +28,7 @@ if (!empty($args['help']) || count($args['_']) === 0 || empty($strategy))
     '                    video_creation_date  Use the movie creation date',
     '                                         (extracted from the metadata with ffprobe)',
     '                    oneplus_media        Use the name of the file (VID_20180413_115301.mp4, IMG_20180418_143440.jpg)',
+    '                    samsung_media        Use the name of the file (20220119_225029.mp4)',
     '                    mp3_duration         Append the duration of the mp3 audio to the filename',
     '--suffix=[string]   Add a suffix to the final filename',
     str_repeat('-', 30),
@@ -154,6 +155,11 @@ class RenameMedias
     {
       $filename = self::getFilename($path);
       return preg_replace('#^(VID_|IMG_)([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]+).(mp4|jpg)$#', '$2-$3-$4-$5', $filename);
+    }
+    else if ($strategy === 'samsung_media')
+    {
+      $filename = self::getFilename($path);
+      return preg_replace('#^([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]+).(mp4|jpg)$#', '$1-$2-$3-$4', $filename);
     }
     else if ($strategy === 'mp3_duration')
     {
