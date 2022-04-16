@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Resources:
+ * - https://coderunner.io/how-to-compress-gopro-movies-and-keep-metadata/
+ * - https://github.com/gopro/gpmf-parser
+ * - https://github.com/stilldavid/gopro-utils#extracting-the-metadata-file
+ */
+
 date_default_timezone_set('Europe/Paris');
 
 require('parse_argv.php');
@@ -8,59 +15,105 @@ $output = [];
 $total_original = 0;
 $total_dest = 0;
 
-if (!empty($args['help']) || count($args['_']) === 0)
+if (!empty($args['help']) || count($args['_']) === 0 || (empty($args['h264']) && empty($args['hevc'])))
 {
   echo implode("\n", [
     str_repeat('-', 30),
-    'Compress videos to H264/AAC (will save to file1.mp4 and keep original in file1.orig.mp4)',
+    'Compress videos to H264/HEVC/AAC (will save to file1.mp4 and keep original in file1.orig.mp4)',
     str_repeat('-', 30),
     'Usage:',
-    '$ compress_video file1.mp4 file2.mp4 [--options]',
+    '$ compress_video --h264 file1.mp4 file2.mp4 [--options]',
     str_repeat('-', 30),
     'Options:',
-    '--force-720p       Force output to 1280x720',
-    '--fps=[number]     Force FPS (default is to stick to source)',
-    '--quality=[number] Set x264 RF value (default is 25)',
-    '--no-audio Remove audio track',
+    '--h264          Re-encode the video with libx264',
+    '--hevc          Re-encode the video with libx265',
+    '--fps=[number]  Force FPS (default is to stick to source)',
+    '--crf=[number]  Set x264/hevc Constant Rate Factor value (default is 25/28)',
+    '--no-audio      Remove audio track',
     str_repeat('-', 30),
   ]) . "\n";
   exit(0);
 }
 
+$codec = $args['h264'] ? 'libx264' : 'libx265';
+$defaultCrf = $codec === 'libx264' ? 25 : 28;
+
 foreach($args['_'] as $path)
 {
+  $output[] = 'Video:             ' . $path;
+  exec('ffprobe -print_format json -show_format -show_streams "' . $path . '" 2>/dev/null', $ffProbeStout);
+  $ffProbeData = json_decode(implode('', $ffProbeStout), true);
+  if (empty($ffProbeData['streams']))
+  {
+    $output[] = 'No streams found';
+    continue;
+  }
   $dest_path = preg_replace('#\.([^.]+)$#i', '.out.mp4', $path);
   $orig_path = preg_replace('#\.([^.]+)$#i', '.orig.$1', $path);
   $params = [
-    '--input'        => '"' . $path . '"',
-    '--output'       => '"' . $dest_path . '"',
-    '--format'       => 'av_mp4',
-    '--encoder'      => 'x264',
-    '--encoder-preset'  => 'slow', // ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
-    '--encoder-profile' => 'high', // auto, main, high
-    '--encoder-tune'    => 'film', // none, film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency
-    '--quality'      => !empty($args['quality']) ? intval($args['quality']) : 25,
-    '--aencoder'     => 'ca_aac',
-    '--ab'           => '112',
+    '-i "' . $path . '"',
+    // '-map 0', // Copy all streams
+    // '-copy_unknown', // Copy unrecognized streams (like GoPro data)
+    '-map_metadata 0', // Copy global metadata
+    // '-c copy', // Codec: copy all streams as is
+    '-c:v ' . $codec, // Video codec: use the h264/hevc depending on input
+    '-preset slow', // x264/hevc preset
+    // '-tune film', // x264/hevc tune (film doesn't exist with hevc?)
+    '-crf ' . (!empty($args['crf']) ? intval($args['crf']) : $defaultCrf),
   ];
   if (!empty($args['fps']))
   {
-    $params['--rate'] = intval($args['fps']);
-  }
-  if (!empty($args['force-720p']))
-  {
-    $params['--width'] = 1280;
-    $params['--height'] = 720;
+    $params[] = '-filter:v fps=' . intval($args['fps']);
   }
   if (!empty($args['no-audio']))
   {
-    $params['--audio'] = 'none';
+    $params[] = '-an'; // Drop all audio streams
   }
-  $command = '/Applications/HandbrakeCLI';
-  foreach($params as $param => $value)
+  else
   {
-    $command .= ' ' . $param . ' ' . $value;
+    $params[] = '-c:a aac';
+    $params[] = '-b:a 192k';
   }
+  $dataStreamId = 0;
+  foreach($ffProbeData['streams'] as $stream)
+  {
+    $codecType = !empty($stream['codec_type']) ? $stream['codec_type'] : '';
+    $handlerName = !empty($stream['tags']['handler_name']) ? $stream['tags']['handler_name'] : '';
+    $encoder = !empty($stream['tags']['encoder']) ? $stream['tags']['encoder'] : '';
+    if ($codecType === 'video' || $codecType === 'audio')
+    {
+      $shortCodecType = substr($codecType, 0, 1);
+      $params[] = '-map 0:' . $shortCodecType; // Map video/audio from input file 0
+      if (!empty($handlerName))
+      {
+        $params[] = '-metadata:s:' . $shortCodecType . ': handler="' . $handlerName . '"';
+      }
+      if (!empty($encoder))
+      {
+        // @todo check if this works?
+        $params[] = '-metadata:s:' . $shortCodecType . ': encoder="' . $encoder . ' (recompressed with ffmpeg)"';
+      }
+    }
+    // @todo write track or export it to .bin:
+    // https://github.com/stilldavid/gopro-utils#extracting-the-metadata-file
+    // if ($codecType === 'data' && !empty($handlerName) && strpos($handlerName, 'GoPro MET') !== false)
+    // {
+    //   // Map data from input file 0 by handle name
+    //   $params[] = '-map 0:m:handler_name:"' . $handlerName . '"';
+    //   // Set same handler name in corresponding destination stream
+    //   $params[] = '-metadata:s:d:' . $dataStreamId . ' handler="' . $handlerName . '"';
+    //   // Flag stream as "gpmd" wich ffmpeg knows,
+    //   // oterwhise it won't copy the stream even with "-copy_unknown"
+    //   $params[] = '-tag:d:' . $dataStreamId . ' "gpmd"';
+    //   $dataStreamId += 1;
+    // }
+  }
+  $command = 'ffmpeg';
+  foreach($params as $param)
+  {
+    $command .= " \\\n" . $param;
+  }
+  $command .= ' "' . $dest_path . '"';
   echo str_repeat('-', 20) . "\n";
   echo 'Running ' . $command . "\n";
   echo str_repeat('-', 20) . "\n";
@@ -71,10 +124,13 @@ foreach($args['_'] as $path)
     echo fread($stream, 4096);
     flush();
   }
-  pclose($stream);
+  $code = pclose($stream);
+  if ($code !== 0)
+  {
+    continue;
+  }
   $original_filesize = round(filesize($path) / 1000 / 1000, 2);
   $dest_filesize = round(filesize($dest_path) / 1000 / 1000, 2);
-  $output[] = 'Video:             ' . $path;
   $output[] = 'Elapsed time:      ' . (time() - $start_time) . 's';
   $output[] = 'Original filesize: ' . $original_filesize . 'M';
   $output[] = 'New filesize:      ' . $dest_filesize . 'M';
