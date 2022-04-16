@@ -92,12 +92,8 @@ foreach($args['_'] as $path)
       $params[] = '-map 0:' . $shortCodecType; // Map video/audio from input file 0
       if (!empty($handlerName))
       {
+        // Save original handler
         $params[] = '-metadata:s:' . $shortCodecType . ': handler="' . $handlerName . '"';
-      }
-      if (!empty($encoder))
-      {
-        // @todo check if this works?
-        $params[] = '-metadata:s:' . $shortCodecType . ': encoder="' . $encoder . ' (recompressed with ffmpeg)"';
       }
     }
     // @todo write track or export it to .bin:
