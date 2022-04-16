@@ -11,7 +11,6 @@
 * Install `jpegoptim`: `brew install jpegoptim`
 * Install `exiftool`: `brew install exiftool`
 * Clone the project: `git clone git@github.com:johansatge/data-hoarding.git`
-* Download [HandbrakeCLI](https://handbrake.fr) and install it under `/Applications/HandbrakeCLI`
 
 Then, source the aliases in the shell (in `~/.zshrc` for instance):
 
