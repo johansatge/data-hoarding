@@ -57,10 +57,16 @@ foreach($args['_'] as $path)
     '-map_metadata 0', // Copy global metadata
     // '-c copy', // Codec: copy all streams as is
     '-c:v ' . $codec, // Video codec: use the h264/hevc depending on input
-    '-preset slow', // x264/hevc preset
+    '-preset ' . ($codec === 'libx264' ? 'slow' : 'faster'), // x264/hevc preset
     // '-tune film', // x264/hevc tune (film doesn't exist with hevc?)
     '-crf ' . (!empty($args['crf']) ? intval($args['crf']) : $defaultCrf),
   ];
+  if ($codec === 'libx265')
+  {
+    // Needed so macOS recognizes the media as HEVC
+    // https://discussions.apple.com/thread/253196462
+    $params[] = '-tag:v hvc1';
+  }
   if (!empty($args['fps']))
   {
     $params[] = '-filter:v fps=' . intval($args['fps']);
@@ -121,6 +127,8 @@ foreach($args['_'] as $path)
   $stream = popen($command . ' 2>&1', 'r');
   while (!feof($stream))
   {
+    // @todo better ffmpeg output
+    // frame=  197 fps=1.6 q=38.3 size=    6144kB time=00:00:03.39 bitrate=14838.5kbits/s speed=0.0283x
     echo fread($stream, 4096);
     flush();
   }
