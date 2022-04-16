@@ -5,6 +5,8 @@ date_default_timezone_set('Europe/Paris');
 require('parse_argv.php');
 $args = parse_argv();
 $output = [];
+$total_original = 0;
+$total_dest = 0;
 
 if (!empty($args['help']) || count($args['_']) === 0)
 {
@@ -70,15 +72,22 @@ foreach($args['_'] as $path)
     flush();
   }
   pclose($stream);
+  $original_filesize = round(filesize($path) / 1000 / 1000, 2);
+  $dest_filesize = round(filesize($dest_path) / 1000 / 1000, 2);
   $output[] = 'Video:             ' . $path;
   $output[] = 'Elapsed time:      ' . (time() - $start_time) . 's';
-  $output[] = 'Original filesize: ' . round(filesize($path) / 1000 / 1000, 2) . 'M';
-  $output[] = 'New filesize:      ' . round(filesize($dest_path) / 1000 / 1000, 2) . 'M';
+  $output[] = 'Original filesize: ' . $original_filesize . 'M';
+  $output[] = 'New filesize:      ' . $dest_filesize . 'M';
   $output[] = str_repeat('-', 20);
   rename($path, $orig_path);
   rename($dest_path, preg_replace('#\.out\.mp4$#', '.mp4', $dest_path));
+  $total_original += $original_filesize;
+  $total_dest += $dest_filesize;
 }
 foreach($output as $line)
 {
   echo $line . "\n";
 }
+echo str_repeat('-', 20) . "\n";
+echo 'Before: ' . $total_original . 'M' . "\n";
+echo 'After: ' . $total_dest . 'M' . "\n";
