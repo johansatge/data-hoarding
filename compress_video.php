@@ -12,14 +12,14 @@ date_default_timezone_set('Europe/Paris');
 require('parse_argv.php');
 $args = parse_argv();
 $output = [];
-$total_original = 0;
-$total_dest = 0;
+$totalOriginal = 0;
+$totalDest = 0;
 
 if (!empty($args['help']) || count($args['_']) === 0 || (empty($args['h264']) && empty($args['hevc'])))
 {
   echo implode("\n", [
     str_repeat('-', 30),
-    'Compress videos to H264/HEVC/AAC (will save to file1.mp4 and keep original in file1.orig.mp4)',
+    'Compress videos to H264/HEVC/AAC (will save to file1.mp4, extract EXIF to file1.json and keep original in file1.orig.mp4)',
     str_repeat('-', 30),
     'Usage:',
     '$ compress_video --h264 file1.mp4 file2.mp4 [--options]',
@@ -48,14 +48,32 @@ foreach($args['_'] as $path)
     $output[] = 'No streams found';
     continue;
   }
-  $dest_path = preg_replace('#\.([^.]+)$#i', '.out.mp4', $path);
-  $orig_path = preg_replace('#\.([^.]+)$#i', '.orig.$1', $path);
+  // -ee to parse all metadata/streams
+  // -g3 to keep hierarchy in streams
+  exec('exiftool -ee -g3 -b -json "' . $path . '"', $exiftoolStdout);
+  $exiftoolData = json_decode(implode('', $exiftoolStdout), true);
+  if (empty($exiftoolData[0]['SourceFile']))
+  {
+    $output[] = 'Could not read file metadata';
+    continue;
+  }
+  $dataPath = preg_replace('#\.([^.]+)$#i', '.json', $path);
+  $destPath = preg_replace('#\.([^.]+)$#i', '.out.mp4', $path);
+  $origPath = preg_replace('#\.([^.]+)$#i', '.orig.$1', $path);
+  if (is_readable($dataPath))
+  {
+    $output[] = 'Metadata file already exists';
+    continue;
+  }
+  if (file_exists($destPath))
+  {
+    $output[] = 'Destination file already exists';
+    continue;
+  }
+  file_put_contents($dataPath, json_encode($exiftoolData[0], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
   $params = [
     '-i "' . $path . '"',
-    // '-map 0', // Copy all streams
-    // '-copy_unknown', // Copy unrecognized streams (like GoPro data)
     '-map_metadata 0', // Copy global metadata
-    // '-c copy', // Codec: copy all streams as is
     '-c:v ' . $codec, // Video codec: use the h264/hevc depending on input
     '-preset ' . ($codec === 'libx264' ? 'slow' : 'faster'), // x264/hevc preset
     // '-tune film', // x264/hevc tune (film doesn't exist with hevc?)
@@ -96,26 +114,13 @@ foreach($args['_'] as $path)
         $params[] = '-metadata:s:' . $shortCodecType . ': handler="' . $handlerName . '"';
       }
     }
-    // @todo write track or export it to .bin:
-    // https://github.com/stilldavid/gopro-utils#extracting-the-metadata-file
-    // if ($codecType === 'data' && !empty($handlerName) && strpos($handlerName, 'GoPro MET') !== false)
-    // {
-    //   // Map data from input file 0 by handle name
-    //   $params[] = '-map 0:m:handler_name:"' . $handlerName . '"';
-    //   // Set same handler name in corresponding destination stream
-    //   $params[] = '-metadata:s:d:' . $dataStreamId . ' handler="' . $handlerName . '"';
-    //   // Flag stream as "gpmd" wich ffmpeg knows,
-    //   // oterwhise it won't copy the stream even with "-copy_unknown"
-    //   $params[] = '-tag:d:' . $dataStreamId . ' "gpmd"';
-    //   $dataStreamId += 1;
-    // }
   }
   $command = 'ffmpeg';
   foreach($params as $param)
   {
     $command .= " \\\n" . $param;
   }
-  $command .= ' "' . $dest_path . '"';
+  $command .= ' "' . $destPath . '"';
   echo str_repeat('-', 20) . "\n";
   echo 'Running ' . $command . "\n";
   echo str_repeat('-', 20) . "\n";
@@ -123,8 +128,6 @@ foreach($args['_'] as $path)
   $stream = popen($command . ' 2>&1', 'r');
   while (!feof($stream))
   {
-    // @todo better ffmpeg output
-    // frame=  197 fps=1.6 q=38.3 size=    6144kB time=00:00:03.39 bitrate=14838.5kbits/s speed=0.0283x
     echo fread($stream, 4096);
     flush();
   }
@@ -133,21 +136,20 @@ foreach($args['_'] as $path)
   {
     continue;
   }
-  $original_filesize = round(filesize($path) / 1000 / 1000, 2);
-  $dest_filesize = round(filesize($dest_path) / 1000 / 1000, 2);
+  $originalFilesize = round(filesize($path) / 1000 / 1000, 2);
+  $destFilesize = round(filesize($destPath) / 1000 / 1000, 2);
   $output[] = 'Elapsed time:      ' . (time() - $start_time) . 's';
-  $output[] = 'Original filesize: ' . $original_filesize . 'M';
-  $output[] = 'New filesize:      ' . $dest_filesize . 'M';
+  $output[] = 'Original filesize: ' . $originalFilesize . 'M';
+  $output[] = 'New filesize:      ' . $destFilesize . 'M';
   $output[] = str_repeat('-', 20);
-  rename($path, $orig_path);
-  rename($dest_path, preg_replace('#\.out\.mp4$#', '.mp4', $dest_path));
-  $total_original += $original_filesize;
-  $total_dest += $dest_filesize;
+  rename($path, $origPath);
+  rename($destPath, preg_replace('#\.out\.mp4$#', '.mp4', $destPath));
+  $totalOriginal += $originalFilesize;
+  $totalDest += $destFilesize;
 }
 foreach($output as $line)
 {
   echo $line . "\n";
 }
-echo str_repeat('-', 20) . "\n";
-echo 'Before: ' . $total_original . 'M' . "\n";
-echo 'After: ' . $total_dest . 'M' . "\n";
+echo 'Before: ' . $totalOriginal . 'M' . "\n";
+echo 'After: ' . $totalDest . 'M' . "\n";
