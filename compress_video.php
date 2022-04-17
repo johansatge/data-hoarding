@@ -128,8 +128,23 @@ foreach($args['_'] as $path)
   $stream = popen($command . ' 2>&1', 'r');
   while (!feof($stream))
   {
-    echo fread($stream, 4096);
+    $ffmpegStdout = fread($stream, 4096);
     flush();
+    preg_match('#time=([0-9]+):([0-9]+):([0-9]+).([0-9]+)#', $ffmpegStdout, $ffmpegData);
+    if (!empty($ffmpegData[0]))
+    {
+      $hours = $ffmpegData[1];
+      $minutes = $ffmpegData[2];
+      $seconds = $ffmpegData[3];
+      $encodedDuration = $hours * 60 * 60 + $minutes * 60 + $seconds;
+      $totalDuration = intval($ffProbeData['format']['duration']);
+      echo implode(' ', [
+        $encodedDuration . 's',
+        'on',
+        $totalDuration . 's',
+        '(' . intval($encodedDuration / $totalDuration * 100) . '%)',
+      ]) . "\r";
+    }
   }
   $code = pclose($stream);
   if ($code !== 0)
