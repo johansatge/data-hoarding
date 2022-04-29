@@ -25,22 +25,22 @@ if (!empty($args['help']) || count($args['_']) === 0 || (empty($args['h264']) &&
     '$ compress_video --h264 file1.mp4 file2.mp4 [--options]',
     str_repeat('-', 30),
     'Options:',
-    '--h264          Re-encode the video with libx264',
-    '--hevc          Re-encode the video with libx265',
-    '--fps=[number]  Force FPS (default is to stick to source)',
-    '--crf=[number]  Set x264/hevc Constant Rate Factor value (default is 25/28)',
-    '--no-audio      Remove audio track',
+    '--h264              Re-encode the video with libx264',
+    '--hevc              Re-encode the video with libx265',
+    '--fps=[number]      Force FPS (default is to stick to source)',
+    '--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 45)',
+    '--no-audio          Remove audio track',
     str_repeat('-', 30),
   ]) . "\n";
   exit(0);
 }
 
-$codec = $args['h264'] ? 'libx264' : 'libx265';
-$defaultCrf = $codec === 'libx264' ? 25 : 28;
+$codec = isset($args['h264']) ? 'h264' : 'hevc';
 
 foreach($args['_'] as $path)
 {
   $output[] = 'Video:             ' . $path;
+  unset($ffProbeStout);
   exec('ffprobe -print_format json -show_format -show_streams "' . $path . '" 2>/dev/null', $ffProbeStout);
   $ffProbeData = json_decode(implode('', $ffProbeStout), true);
   if (empty($ffProbeData['streams']))
@@ -48,8 +48,11 @@ foreach($args['_'] as $path)
     $output[] = 'No streams found';
     continue;
   }
+
+  // Extract metadata tracks with ffprobe (like GoPro GPS & accelerometer tracks)
   // -ee to parse all metadata/streams
   // -g3 to keep hierarchy in streams
+  unset($exiftoolStdout);
   exec('exiftool -ee -g3 -b -json "' . $path . '"', $exiftoolStdout);
   $exiftoolData = json_decode(implode('', $exiftoolStdout), true);
   if (empty($exiftoolData[0]['SourceFile']))
@@ -71,19 +74,24 @@ foreach($args['_'] as $path)
     continue;
   }
   file_put_contents($dataPath, json_encode($exiftoolData[0], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
+
+  // Transcode file with ffmpeg
   $params = [
     '-i "' . $path . '"',
     '-map_metadata 0', // Copy global metadata
-    '-c:v ' . $codec, // Video codec: use the h264/hevc depending on input
-    '-preset ' . ($codec === 'libx264' ? 'slow' : 'faster'), // x264/hevc preset
-    // '-tune film', // x264/hevc tune (film doesn't exist with hevc?)
-    '-crf ' . (!empty($args['crf']) ? intval($args['crf']) : $defaultCrf),
   ];
-  if ($codec === 'libx265')
+  if ($codec === 'h264')
   {
-    // Needed so macOS recognizes the media as HEVC
-    // https://discussions.apple.com/thread/253196462
-    $params[] = '-tag:v hvc1';
+    $params[] = '-c:v libx264';
+    $params[] = '-preset slow';
+    $params[] = '-crf ' . (!empty($args['quality']) ? intval($args['quality']) : 25);
+    // '-tune film', // x264 tune (film doesn't exist with hevc?)
+  }
+  if ($codec === 'hevc')
+  {
+    $params[] = '-c:v hevc_videotoolbox'; // libx265 is too slow, even on M1
+    $params[] = '-q:v ' . (!empty($args['quality']) ? intval($args['quality']) : 45); // https://stackoverflow.com/a/69668183
+    $params[] = '-tag:v hvc1'; // Needed so macOS recognizes the media as HEVC (https://discussions.apple.com/thread/253196462)
   }
   if (!empty($args['fps']))
   {
@@ -103,15 +111,14 @@ foreach($args['_'] as $path)
   {
     $codecType = !empty($stream['codec_type']) ? $stream['codec_type'] : '';
     $handlerName = !empty($stream['tags']['handler_name']) ? $stream['tags']['handler_name'] : '';
-    $encoder = !empty($stream['tags']['encoder']) ? $stream['tags']['encoder'] : '';
+    // Map video/audio from input file 0 & save original handler if possible
     if ($codecType === 'video' || $codecType === 'audio')
     {
       $shortCodecType = substr($codecType, 0, 1);
-      $params[] = '-map 0:' . $shortCodecType; // Map video/audio from input file 0
+      $params[] = '-map 0:' . $shortCodecType;
       if (!empty($handlerName))
       {
-        // Save original handler
-        $params[] = '-metadata:s:' . $shortCodecType . ': handler="' . $handlerName . '"';
+        $params[] = '-metadata:s:' . $shortCodecType . ': handler="' . trim($handlerName) . '"';
       }
     }
   }
@@ -120,7 +127,7 @@ foreach($args['_'] as $path)
   {
     $command .= " \\\n" . $param;
   }
-  $command .= ' "' . $destPath . '"';
+  $command .= " \\\n" . '"' . $destPath . '"';
   echo str_repeat('-', 20) . "\n";
   echo 'Running ' . $command . "\n";
   echo str_repeat('-', 20) . "\n";
@@ -130,19 +137,20 @@ foreach($args['_'] as $path)
   {
     $ffmpegStdout = fread($stream, 4096);
     flush();
-    preg_match('#time=([0-9]+):([0-9]+):([0-9]+).([0-9]+)#', $ffmpegStdout, $ffmpegData);
+    preg_match('#fps=([ 0-9]+).*time=([0-9]+):([0-9]+):([0-9]+).([0-9]+)#', $ffmpegStdout, $ffmpegData);
     if (!empty($ffmpegData[0]))
     {
-      $hours = $ffmpegData[1];
-      $minutes = $ffmpegData[2];
-      $seconds = $ffmpegData[3];
+      $fps = floatval(trim($ffmpegData[1]));
+      $hours = $ffmpegData[2];
+      $minutes = $ffmpegData[3];
+      $seconds = $ffmpegData[4];
       $encodedDuration = $hours * 60 * 60 + $minutes * 60 + $seconds;
       $totalDuration = intval($ffProbeData['format']['duration']);
       echo implode(' ', [
         $encodedDuration . 's',
-        'on',
+        'transcoded on',
         $totalDuration . 's',
-        '(' . intval($encodedDuration / $totalDuration * 100) . '%)',
+        '(' . intval($encodedDuration / $totalDuration * 100) . '% at ' . $fps . 'fps)',
       ]) . "\r";
     }
   }
