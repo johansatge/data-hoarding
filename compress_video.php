@@ -30,12 +30,14 @@ if (!empty($args['help']) || count($args['_']) === 0 || (empty($args['h264']) &&
     '--fps=[number]      Force FPS (default is to stick to source)',
     '--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 45)',
     '--no-audio          Remove audio track',
+    '--no-metadata        Don\'t export video metadata',
     str_repeat('-', 30),
   ]) . "\n";
   exit(0);
 }
 
 $codec = isset($args['h264']) ? 'h264' : 'hevc';
+$withMetadata = !isset($args['no-metadata']);
 
 foreach($args['_'] as $path)
 {
@@ -49,31 +51,35 @@ foreach($args['_'] as $path)
     continue;
   }
 
-  // Extract metadata tracks with ffprobe (like GoPro GPS & accelerometer tracks)
-  // -ee to parse all metadata/streams
-  // -g3 to keep hierarchy in streams
-  unset($exiftoolStdout);
-  exec('exiftool -ee -g3 -b -json "' . $path . '"', $exiftoolStdout);
-  $exiftoolData = json_decode(implode('', $exiftoolStdout), true);
-  if (empty($exiftoolData[0]['SourceFile']))
-  {
-    $output[] = 'Could not read file metadata';
-    continue;
-  }
-  $dataPath = preg_replace('#\.([^.]+)$#i', '.json', $path);
-  $destPath = preg_replace('#\.([^.]+)$#i', '.out.mp4', $path);
   $origPath = preg_replace('#\.([^.]+)$#i', '.orig.$1', $path);
-  if (is_readable($dataPath))
-  {
-    $output[] = 'Metadata file already exists';
-    continue;
-  }
+  $destPath = preg_replace('#\.([^.]+)$#i', '.out.mp4', $path);
   if (file_exists($destPath))
   {
     $output[] = 'Destination file already exists';
     continue;
   }
-  file_put_contents($dataPath, json_encode($exiftoolData[0], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
+
+  // Extract metadata tracks with ffprobe (like GoPro GPS & accelerometer tracks)
+  // -ee to parse all metadata/streams
+  // -g3 to keep hierarchy in streams
+  unset($exiftoolStdout);
+  if ($withMetadata)
+  {
+    exec('exiftool -ee -g3 -b -json "' . $path . '"', $exiftoolStdout);
+    $exiftoolData = json_decode(implode('', $exiftoolStdout), true);
+    if (empty($exiftoolData[0]['SourceFile']))
+    {
+      $output[] = 'Could not read file metadata';
+      continue;
+    }
+    $dataPath = preg_replace('#\.([^.]+)$#i', '.json', $path);
+    if (is_readable($dataPath))
+    {
+      $output[] = 'Metadata file already exists';
+      continue;
+    }
+    file_put_contents($dataPath, json_encode($exiftoolData[0], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
+  }
 
   // Transcode file with ffmpeg
   $params = [
