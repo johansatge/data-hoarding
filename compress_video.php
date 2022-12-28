@@ -160,6 +160,7 @@ foreach($args['_'] as $path)
       ]) . "\r";
     }
   }
+  echo "\n";
   $code = pclose($stream);
   if ($code !== 0)
   {
