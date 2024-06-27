@@ -11,7 +11,7 @@
   * [Renaming medias by date](#renaming-medias-by-date)
   * [Stabilizing videos](#stabilizing-videos)
   * [Shifting EXIF date in images](#shifting-exif-date-in-images)
-  * [Assembling dashcam videos](#assembling-dascham-videos)
+  * [Assembling dashcam videos](#assembling-dashcam-videos)
 
 ## Installation
 
@@ -64,7 +64,7 @@ Options:
 ------------------------------
 ```
 
-## Comparing videos
+### Comparing videos
 
 ```shell
 → compare_video
@@ -76,7 +76,7 @@ $ compare_video file1.mp4 file2.mp4 destination/directory
 ------------------------------
 ```
 
-## Extracting EXIF from images
+### Extracting EXIF from images
 
 ```shell
 ------------------------------
@@ -87,7 +87,7 @@ $ extract_exif picture.jpg > exif.json
 ------------------------------
 ```
 
-## Renaming medias by date
+### Renaming medias by date
 
 ```shell
 → rename_media
@@ -113,7 +113,7 @@ Options:
 ------------------------------
 ```
 
-## Stabilizing videos
+### Stabilizing videos
 
 ```shell
 → stabilize_video
@@ -133,7 +133,7 @@ Options:
 ------------------------------
 ```
 
-## Shifting EXIF date in images
+### Shifting EXIF date in images
 
 ```shell
 → shift_exif_date
@@ -148,7 +148,7 @@ $ shift_exif_date file1.jpg file2.jpg --model=pentax
 ------------------------------
 ```
 
-# Assembling dashcam videos
+### Assembling dashcam videos
 
 ```shell
 ------------------------------
