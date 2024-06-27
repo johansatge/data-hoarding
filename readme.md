@@ -11,6 +11,7 @@
   * [Renaming medias by date](#renaming-medias-by-date)
   * [Stabilizing videos](#stabilizing-videos)
   * [Shifting EXIF date in images](#shifting-exif-date-in-images)
+  * [Assembling dashcam videos](#assembling-dascham-videos)
 
 ## Installation
 
@@ -55,6 +56,7 @@ $ compress_video --h264 file1.mp4 file2.mp4 [--options]
 Options:
 --h264              Re-encode the video with libx264
 --hevc              Re-encode the video with libx265
+--force-1080p       Re-encode in 1080p
 --fps=[number]      Force FPS (default is to stick to source)
 --quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 45)
 --no-audio          Remove audio track
@@ -143,5 +145,20 @@ Usage:
 $ shift_exif_date file1.jpg file2.jpg --add-hours=1
 $ shift_exif_date file1.jpg file2.jpg --substract-hours=2
 $ shift_exif_date file1.jpg file2.jpg --model=pentax
+------------------------------
+```
+
+# Assembling dashcam videos
+
+```shell
+------------------------------
+Assemble dashcam videos (format: YYYYMMDD_HHIISSX.ts) (with X being [F]ront or [R]ear)
+------------------------------
+Usage:
+$ assemble_dascham path/to/ts/files
+------------------------------
+Options:
+--stack    Stack vertically front and rear videos
+--overlay  Overlay rear on top of the right left corner of the front
 ------------------------------
 ```
