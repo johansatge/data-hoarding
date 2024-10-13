@@ -36,10 +36,11 @@ _Note: the `DATA_HOARDING_PATH` var is mandatory, it is used in `aliases.sh`._
 ```shell
 → compress_image
 ------------------------------
-Compress JPEG images in place (85%) without stripping EXIF tags
+Compress images (jpeg 85%) without stripping EXIF tags
+(Compressing a RAW image will generate a corresponding jpeg file, and keep the original)
 ------------------------------
 Usage:
-$ compress_image file1.jpg file2.jpg
+$ compress_image file1.jpg file2.jpg file3.pef file4.dng
 ------------------------------
 ```
 
