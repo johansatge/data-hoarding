@@ -12,7 +12,7 @@ if (!empty($args['help']) || count($args['_']) === 0 || (!$needsStack && !$needs
 {
   echo implode("\n", [
     str_repeat('-', 30),
-    'Assemble dashcam videos (format: YYYYMMDD_HHIISSX.ts) (with X being [F]ront or [R]ear)',
+    'Assemble Viofo dashcam videos (format: YYYYMMDD_HHIISSX.ts) (with X being [F]ront or [R]ear)',
     str_repeat('-', 30),
     'Usage:',
     '$ assemble_dascham path/to/ts/files',
@@ -43,7 +43,7 @@ if ($needsOverlay) {
   runCommand('ffmpeg ' . implode(' ', [
     '-i "' . $frontCombinedFile . '"',
     '-i "' . $rearCombinedFile . '"',
-    '-filter_complex "[1:v]scale=960:540[overlay];[0:v][overlay]overlay=1580:20"',
+    '-filter_complex "[1:v]scale=854:480[overlay];[0:v][overlay]overlay=1686:20"',
     '-c:v libx264 -crf 15 -preset ultrafast',
     '"' . realpath($dir) . '/_overlayed.mp4"',
   ]));
