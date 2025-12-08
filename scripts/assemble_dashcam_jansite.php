@@ -15,7 +15,7 @@ if (!empty($args['help']) || count($args['_']) === 0 || (!$needsStack && !$needs
     'Assemble Jansite dashcam videos (format: YYYYMMDD_HHIISSX.ts) (with X being [F]ront or [R]ear)',
     str_repeat('-', 30),
     'Usage:',
-    '$ assemble_dascham path/to/ts/files',
+    '$ assemble_dascham_jansite path/to/ts/files',
     str_repeat('-', 30),
     'Options:',
     '--stack    Stack vertically front and rear videos',
