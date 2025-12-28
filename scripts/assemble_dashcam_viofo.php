@@ -43,7 +43,7 @@ if ($needsOverlay) {
   runCommand('ffmpeg ' . implode(' ', [
     '-i "' . $frontCombinedFile . '"',
     '-i "' . $rearCombinedFile . '"',
-    '-filter_complex "[1:v]scale=854:480[overlay];[0:v][overlay]overlay=1686:20"',
+    '-filter_complex "[1:v]scale=800:450[overlay];[0:v][overlay]overlay=1740:20"',
     '-c:v libx264 -crf 15 -preset ultrafast',
     '"' . realpath($dir) . '/_overlayed.mp4"',
   ]));
