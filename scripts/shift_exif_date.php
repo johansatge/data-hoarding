@@ -50,7 +50,12 @@ foreach($args['_'] as $filePath)
     continue;
   }
   $command = 'exiftool "' . $shiftCommand . '" "' . $filePath . '"';
-  exec($command . ' 2>&1');
+  exec($command . ' 2>&1', $output, $returnCode);
+  if ($returnCode !== 0)
+  {
+    echo 'Failed to update ' . $filePath . ' (exiftool returned code ' . $returnCode . ': ' . implode("\n", $output) . ')' . "\n";
+    exit(1);
+  }
   $newDate = readExifDate($filePath);
   echo 'Updated ' . $filePath . ' (' . $oldDate . ' -> ' . $newDate . ')' . "\n";
 }
