@@ -30,6 +30,7 @@ if (!empty($args['help']) || count($args['_']) === 0 || (empty($args['h264']) &&
     '--force-1080p       Re-encode in 1080p',
     '--fps=[number]      Force FPS (default is to stick to source)',
     '--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 45)',
+    '--speed=[number]    Speed up the video (e.g., x2, x4, x8)',
     '--no-audio          Remove audio track',
     '--no-metadata        Don\'t export video metadata',
     str_repeat('-', 30),
@@ -100,13 +101,28 @@ foreach($args['_'] as $path)
     $params[] = '-q:v ' . (!empty($args['quality']) ? intval($args['quality']) : 45); // https://stackoverflow.com/a/69668183
     $params[] = '-tag:v hvc1'; // Needed so macOS recognizes the media as HEVC (https://discussions.apple.com/thread/253196462)
   }
+  
+  // Build video filters
+  $videoFilters = [];
+  if (!empty($args['speed']))
+  {
+    $speed = floatval(preg_replace('/[^0-9.]/', '', $args['speed']));
+    if ($speed > 0)
+    {
+      $videoFilters[] = 'setpts=' . (1 / $speed) . '*PTS';
+    }
+  }
   if (!empty($args['force-1080p']))
   {
-    $params[] = '-filter:v scale=-1:1080';
+    $videoFilters[] = 'scale=-1:1080';
   }
   if (!empty($args['fps']))
   {
-    $params[] = '-filter:v fps=' . intval($args['fps']);
+    $videoFilters[] = 'fps=' . intval($args['fps']);
+  }
+  if (!empty($videoFilters))
+  {
+    $params[] = '-filter:v "' . implode(',', $videoFilters) . '"';
   }
   if (!empty($args['no-audio']))
   {
@@ -116,6 +132,33 @@ foreach($args['_'] as $path)
   {
     $params[] = '-c:a aac';
     $params[] = '-b:a 192k';
+    // Apply audio speed adjustment if --speed is set
+    // (Sonnet added this, to be tested with a real video with sound)
+    if (!empty($args['speed']))
+    {
+      $speed = floatval(preg_replace('/[^0-9.]/', '', $args['speed']));
+      if ($speed > 0 && $speed <= 2)
+      {
+        // atempo accepts values between 0.5 and 2.0
+        $params[] = '-filter:a "atempo=' . $speed . '"';
+      }
+      elseif ($speed > 2)
+      {
+        // For speed > 2, chain multiple atempo filters
+        $audioFilters = [];
+        $remainingSpeed = $speed;
+        while ($remainingSpeed > 2)
+        {
+          $audioFilters[] = 'atempo=2.0';
+          $remainingSpeed /= 2;
+        }
+        if ($remainingSpeed > 1)
+        {
+          $audioFilters[] = 'atempo=' . $remainingSpeed;
+        }
+        $params[] = '-filter:a "' . implode(',', $audioFilters) . '"';
+      }
+    }
   }
   $dataStreamId = 0;
   foreach($ffProbeData['streams'] as $stream)
