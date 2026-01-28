@@ -25,19 +25,20 @@ if (!empty($args['help']) || count($args['_']) === 0)
     '$ compress_video file1.mp4 file2.mp4 [--options]',
     str_repeat('-', 30),
     'Options:',
-    '--h264              Re-encode the video with libx264 (instead of HEVC)',
+    '--h264              Re-encode the video with libx264 (instead of hevc_videotoolbox)',
+    '--x265              Re-encode the video with libx265 (instead of hevc_videotoolbox) (very slow)',
     '--force-1080p       Re-encode in 1080p',
     '--fps=[number]      Force FPS (default is to stick to source)',
-    '--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 45)',
+    '--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 50)',
     '--speed=[number]    Speed up the video (e.g., x2, x4, x8)',
     '--no-audio          Remove audio track',
-    '--with-metadata     Export video metadata to JSON file',
+    '--with-metadata     Export video metadata to JSON file (GPS, accelerometer, etc.)',
     str_repeat('-', 30),
   ]) . "\n";
   exit(0);
 }
 
-$codec = isset($args['h264']) ? 'h264' : 'hevc';
+$codec = isset($args['h264']) ? 'h264' : (isset($args['x265']) ? 'x265' : 'hevc_videotoolbox');
 $withMetadata = isset($args['with-metadata']);
 
 foreach($args['_'] as $path)
@@ -94,10 +95,20 @@ foreach($args['_'] as $path)
     $params[] = '-crf ' . (!empty($args['quality']) ? intval($args['quality']) : 25);
     // '-tune film', // x264 tune (film doesn't exist with hevc?)
   }
-  if ($codec === 'hevc')
+  if ($codec === 'hevc_videotoolbox')
   {
-    $params[] = '-c:v hevc_videotoolbox'; // libx265 is too slow, even on M1
-    $params[] = '-q:v ' . (!empty($args['quality']) ? intval($args['quality']) : 45); // https://stackoverflow.com/a/69668183
+    $params[] = '-c:v hevc_videotoolbox';
+    $params[] = '-q:v ' . (!empty($args['quality']) ? intval($args['quality']) : 5O); // https://stackoverflow.com/a/69668183
+    $params[] = '-tag:v hvc1'; // Needed so macOS recognizes the media as HEVC (https://discussions.apple.com/thread/253196462)
+  }
+  // Extremely slow on mac m1 (1fps for 4k source)
+  // Going with a preset fast or medium is better (6-7fps for 4k source) but ends up with a worse result than videotoolbox
+  // CRF 30 is similar to q:v 45 with videotoolbox but with a worse or similar visual quality
+  if ($codec === 'x265')
+  {
+    $params[] = '-c:v libx265';
+    $params[] = '-preset slow';
+    $params[] = '-crf ' . (!empty($args['quality']) ? intval($args['quality']) : 23);
     $params[] = '-tag:v hvc1'; // Needed so macOS recognizes the media as HEVC (https://discussions.apple.com/thread/253196462)
   }
   
