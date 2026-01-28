@@ -3,7 +3,7 @@
 > A collection of scripts to organize and edit files
 
 * [Installation](#installation)
-* [Scripts](#compress-images)
+* [Scripts](#scripts)
   * [Compressing images](#compressing-images)
   * [Compressing videos](#compressing-videos)
   * [Comparing videos](#comparing-videos)
@@ -48,19 +48,20 @@ $ compress_image file1.jpg file2.jpg file3.pef file4.dng
 ```shell
 → compress_video
 ------------------------------
-Compress videos to H264/HEVC/AAC (will save to file1.mp4, extract EXIF to file1.json and keep original in file1.orig.mp4)
+Compress videos to HEVC/AAC (will save to file1.mp4 and keep original in file1.orig.mp4)
 ------------------------------
 Usage:
-$ compress_video --h264 file1.mp4 file2.mp4 [--options]
+$ compress_video file1.mp4 file2.mp4 [--options]
 ------------------------------
 Options:
---h264              Re-encode the video with libx264
---hevc              Re-encode the video with libx265
+--h264              Re-encode the video with libx264 (instead of hevc_videotoolbox)
+--x265              Re-encode the video with libx265 (instead of hevc_videotoolbox) (very slow)
 --force-1080p       Re-encode in 1080p
 --fps=[number]      Force FPS (default is to stick to source)
---quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 45)
+--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 50)
+--speed=[number]    Speed up the video (e.g., x2, x4, x8)
 --no-audio          Remove audio track
---no-metadata        Don't export video metadata
+--with-metadata     Export video metadata to JSON file (GPS, accelerometer, etc.)
 ------------------------------
 ```
 
@@ -69,10 +70,10 @@ Options:
 ```shell
 → compare_video
 ------------------------------
-Compare two videos by extracting frames in the specified directory
+Compare multiple videos by extracting frames in the specified directory
 ------------------------------
 Usage:
-$ compare_video file1.mp4 file2.mp4 destination/directory
+$ compare_video file1.mp4 file2.mp4 [file3.mp4 ...] destination/directory
 ------------------------------
 ```
 
@@ -109,6 +110,7 @@ Options:
                     oneplus_media        Use the name of the file (VID_20180413_115301.mp4, IMG_20180418_143440.jpg)
                     samsung_media        Use the name of the file (20220119_225029.mp4)
                     mp3_duration         Append the duration of the mp3 audio to the filename
+                    nintendo_switch      Use the name of the file (2020032820112600-02CB906EA538A35643C1E1484C4B947D.jpg)
 --suffix=[string]   Add a suffix to the final filename
 ------------------------------
 ```
@@ -150,12 +152,31 @@ $ shift_exif_date file1.jpg file2.jpg --model=pentax
 
 ### Assembling dashcam videos
 
+#### Jansite dashcams
+
 ```shell
+→ assemble_dashcam_jansite
 ------------------------------
-Assemble dashcam videos (format: YYYYMMDD_HHIISSX.ts) (with X being [F]ront or [R]ear)
+Assemble Jansite dashcam videos (format: YYYYMMDD_HHIISSX.ts) (with X being [F]ront or [R]ear)
 ------------------------------
 Usage:
-$ assemble_dascham path/to/ts/files
+$ assemble_dashcam_jansite path/to/ts/files
+------------------------------
+Options:
+--stack    Stack vertically front and rear videos
+--overlay  Overlay rear on top of the right left corner of the front
+------------------------------
+```
+
+#### Viofo dashcams
+
+```shell
+→ assemble_dashcam_viofo
+------------------------------
+Assemble Viofo dashcam videos (format: YYYY_MMDD_HHIISS_XXXXZ.MP4) (with XXXX being a numeric index and Z being [F]ront or [R]ear)
+------------------------------
+Usage:
+$ assemble_dashcam_viofo path/to/mp4/files
 ------------------------------
 Options:
 --stack    Stack vertically front and rear videos
