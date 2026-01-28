@@ -15,31 +15,30 @@ $output = [];
 $totalOriginal = 0;
 $totalDest = 0;
 
-if (!empty($args['help']) || count($args['_']) === 0 || (empty($args['h264']) && empty($args['hevc'])))
+if (!empty($args['help']) || count($args['_']) === 0)
 {
   echo implode("\n", [
     str_repeat('-', 30),
-    'Compress videos to H264/HEVC/AAC (will save to file1.mp4, extract EXIF to file1.json and keep original in file1.orig.mp4)',
+    'Compress videos to HEVC/AAC (will save to file1.mp4 and keep original in file1.orig.mp4)',
     str_repeat('-', 30),
     'Usage:',
-    '$ compress_video --h264 file1.mp4 file2.mp4 [--options]',
+    '$ compress_video file1.mp4 file2.mp4 [--options]',
     str_repeat('-', 30),
     'Options:',
-    '--h264              Re-encode the video with libx264',
-    '--hevc              Re-encode the video with libx265',
+    '--h264              Re-encode the video with libx264 (instead of HEVC)',
     '--force-1080p       Re-encode in 1080p',
     '--fps=[number]      Force FPS (default is to stick to source)',
     '--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 45)',
     '--speed=[number]    Speed up the video (e.g., x2, x4, x8)',
     '--no-audio          Remove audio track',
-    '--no-metadata        Don\'t export video metadata',
+    '--with-metadata     Export video metadata to JSON file',
     str_repeat('-', 30),
   ]) . "\n";
   exit(0);
 }
 
 $codec = isset($args['h264']) ? 'h264' : 'hevc';
-$withMetadata = !isset($args['no-metadata']);
+$withMetadata = isset($args['with-metadata']);
 
 foreach($args['_'] as $path)
 {
