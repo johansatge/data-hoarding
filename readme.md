@@ -16,7 +16,6 @@
 ## Installation
 
 * Install `ffmpeg`: `brew install ffmpeg --with-libvidstab`
-* Install `jpegoptim`: `brew install jpegoptim`
 * Install `exiftool`: `brew install exiftool`
 * Clone the project: `git clone git@github.com:johansatge/data-hoarding.git`
 

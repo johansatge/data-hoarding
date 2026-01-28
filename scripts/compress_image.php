@@ -38,8 +38,13 @@ function convertRawToJpeg($filePath) {
   compressJpeg($destFilePath);
 }
 
+// @todo run all images through the same jpegoptim instance? with parallel threads, see jpegoptim options
 function compressJpeg($filePath) {
-  runCommand('jpegoptim --max=85 --strip-none --totals "' . $filePath . '"');
+  // Use a custom build of jpegoptim (from ImageOptim using mozjpeg) for better results
+  // Context in https://github.com/ImageOptim/ImageOptim/issues/102#issuecomment-327311201
+  // @todo compile a more recent version
+  $jpegoptimBin = __DIR__ . '/../bin/jpegoptim';
+  runCommand('"' . $jpegoptimBin . '" --max=85 --strip-none --totals "' . $filePath . '"');
 }
 
 function runCommand($command) {
