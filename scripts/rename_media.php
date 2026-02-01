@@ -76,6 +76,7 @@ class RenameMedias
   {
     $info = pathinfo($path);
     $ext = str_replace('jpeg', 'jpg', strtolower($info['extension']));
+    $original_filename = self::getFilename($path);
 
     $new_filename = self::getFilenameByStrategy($path, $strategy);
     if ($new_filename === false)
@@ -110,7 +111,7 @@ class RenameMedias
         rename($path, $updated_path);
         if ($strategy === 'exif_date')
         {
-          self::writeOriginalFilenameInExif($updated_path, self::getFilename($path));
+          self::writeOriginalFilenameInExif($updated_path, $original_filename);
         }
       }
     }
