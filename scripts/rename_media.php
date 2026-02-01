@@ -54,28 +54,28 @@ class RenameMedias
       echo "\rAnalyzing $i/" . count($paths) . ' files';
       $data = self::planFileRename($path, $strategy, $suffix);
       $plan[] = $data;
-      self::$updatedPaths[] = $data['updated_path'];
+      self::$updatedPaths[] = $data['updatedPath'];
     }
     echo "\n";
 
     // Display planned changes
     echo "\nPlanned changes:\n";
     $duplicates = 0;
-    $to_rename = 0;
-    $already_named = 0;
+    $toRename = 0;
+    $alreadyNamed = 0;
     foreach($plan as $data)
     {
-      echo $data['source_name'] . ' => ' . $data['updated_name'] . ' ' . self::getEmoji($data) . "\n";
-      $duplicates += $data['is_duplicate'] ? 1 : 0;
-      $already_named += $data['is_already_named'] ? 1 : 0;
-      $to_rename += $data['is_already_named'] ? 0 : 1;
+      echo $data['sourceName'] . ' => ' . $data['updatedName'] . ' ' . self::getEmoji($data) . "\n";
+      $duplicates += $data['isDuplicate'] ? 1 : 0;
+      $alreadyNamed += $data['isAlreadyNamed'] ? 1 : 0;
+      $toRename += $data['isAlreadyNamed'] ? 0 : 1;
     }
     echo count($paths) . ' files.' . "\n";
-    echo $to_rename . ' will be renamed. (' . $duplicates . ' duplicates)' . "\n";
-    echo $already_named . ' already named.' . "\n";
+    echo $toRename . ' will be renamed. (' . $duplicates . ' duplicates)' . "\n";
+    echo $alreadyNamed . ' already named.' . "\n";
 
     // Ask for confirmation
-    if ($to_rename === 0)
+    if ($toRename === 0)
     {
       echo "\nNo changes needed.\n";
       exit(0);
@@ -93,10 +93,10 @@ class RenameMedias
     $i = 0;
     foreach($plan as $data)
     {
-      $i++;
-      echo "\rRenaming $i/" . count($plan) . ' files';
-      if (!$data['is_already_named'])
+      if (!$data['isAlreadyNamed'])
       {
+        $i++;
+        echo "\rRenaming $i/" . $toRename . ' files';
         self::executeRename($data, $strategy);
       }
     }
@@ -108,63 +108,63 @@ class RenameMedias
 
   private static function executeRename($data, $strategy)
   {
-    $source_path = $data['source_path'];
-    $target_path = $data['updated_path'];
-    rename($source_path, $target_path);
+    $sourcePath = $data['sourcePath'];
+    $targetPath = $data['updatedPath'];
+    rename($sourcePath, $targetPath);
     if ($strategy === 'exif_date')
     {
-      self::writeOriginalFilenameInExif($target_path, $data['source_name']);
+      self::writeOriginalFilenameInExif($targetPath, $data['sourceName']);
     }
   }
 
   private static function getEmoji($data)
   {
-    if ($data['is_already_named'])
+    if ($data['isAlreadyNamed'])
     {
       return '✅';
     }
-    return $data['is_duplicate'] ? '⚠️' : '🖍️';
+    return $data['isDuplicate'] ? '⚠️' : '🖍️';
   }
 
   private static function planFileRename($path, $strategy, $suffix)
   {
     $info = pathinfo($path);
     $ext = str_replace('jpeg', 'jpg', strtolower($info['extension']));
-    $original_filename = self::getFilename($path);
+    $originalFilename = self::getFilename($path);
 
-    $new_filename = self::getFilenameByStrategy($path, $strategy);
-    if ($new_filename === false)
+    $newFilename = self::getFilenameByStrategy($path, $strategy);
+    if ($newFilename === false)
     {
-      $new_filename = $info['filename'];
+      $newFilename = $info['filename'];
     }
 
-    $new_filename .= $suffix !== false ? '-' . $suffix : '';
+    $newFilename .= $suffix !== false ? '-' . $suffix : '';
 
-    $updated_path = $info['dirname'] . '/' . $new_filename . '.' . $ext;
+    $updatedPath = $info['dirname'] . '/' . $newFilename . '.' . $ext;
 
-    $is_duplicate = false;
-    $is_already_named = false;
+    $isDuplicate = false;
+    $isAlreadyNamed = false;
     
-    if (basename($path) === basename($updated_path))
+    if (basename($path) === basename($updatedPath))
     {
-      $is_already_named = true;
+      $isAlreadyNamed = true;
     }
     else
     {
-      if (self::isReadableMacOS($updated_path) || in_array($updated_path, self::$updatedPaths)) {
-        $is_duplicate = true;
+      if (self::isReadableMacOS($updatedPath) || in_array($updatedPath, self::$updatedPaths)) {
+        $isDuplicate = true;
         $uniq = substr(md5_file($path), 0, 6);
-        $updated_path = $info['dirname'] . '/' . $new_filename . '_' . $uniq . '.' . $ext;
+        $updatedPath = $info['dirname'] . '/' . $newFilename . '_' . $uniq . '.' . $ext;
       }
     }
 
     return [
-      'source_name' => $original_filename,
-      'updated_name' => self::getFilename($updated_path),
-      'source_path' => $path,
-      'updated_path' => $updated_path,
-      'is_duplicate' => $is_duplicate,
-      'is_already_named' => $is_already_named,
+      'sourceName' => $originalFilename,
+      'updatedName' => self::getFilename($updatedPath),
+      'sourcePath' => $path,
+      'updatedPath' => $updatedPath,
+      'isDuplicate' => $isDuplicate,
+      'isAlreadyNamed' => $isAlreadyNamed,
     ];
   }
 
@@ -178,16 +178,16 @@ class RenameMedias
     return in_array($filename, $existingFilenames);
   }
 
-  private static function writeOriginalFilenameInExif($path, $original_filename)
+  private static function writeOriginalFilenameInExif($path, $originalFilename)
   {
-    $marker = 'Original filename: ' . $original_filename;
-    $stdout_lines = [];
-    $read_command = 'exiftool -UserComment -s -s -s ' . escapeshellarg($path) . ' 2>/dev/null';
-    exec($read_command, $stdout_lines);
-    $existing = !empty($stdout_lines[0]) ? trim($stdout_lines[0]) : '';
-    $new_value = $existing !== '' ? $existing . "\n" . $marker : $marker;
-    $write_command = 'exiftool -overwrite_original -UserComment=' . escapeshellarg($new_value) . ' ' . escapeshellarg($path) . ' 2>/dev/null';
-    exec($write_command);
+    $marker = 'Original filename: ' . $originalFilename;
+    $stdoutLines = [];
+    $readCommand = 'exiftool -UserComment -s -s -s ' . escapeshellarg($path) . ' 2>/dev/null';
+    exec($readCommand, $stdoutLines);
+    $existing = !empty($stdoutLines[0]) ? trim($stdoutLines[0]) : '';
+    $newValue = $existing !== '' ? $existing . "\n" . $marker : $marker;
+    $writeCommand = 'exiftool -overwrite_original -UserComment=' . escapeshellarg($newValue) . ' ' . escapeshellarg($path) . ' 2>/dev/null';
+    exec($writeCommand);
   }
 
   private static function getFilenameByStrategy($path, $strategy)
@@ -199,12 +199,12 @@ class RenameMedias
     if ($strategy === 'exif_date')
     {
       // Use exiftool instead of exif_read_data() for better compatibility with HEIC
-      $stdout_lines = [];
+      $stdoutLines = [];
       $command = 'exiftool -DateTimeOriginal -d "%Y-%m-%d-%H%M%S" -s -s -s ' . escapeshellarg($path) . ' 2>/dev/null';
-      exec($command, $stdout_lines);
-      if (!empty($stdout_lines[0]) && substr($stdout_lines[0], 0, 4) !== '0000')
+      exec($command, $stdoutLines);
+      if (!empty($stdoutLines[0]) && substr($stdoutLines[0], 0, 4) !== '0000')
       {
-        return $stdout_lines[0];
+        return $stdoutLines[0];
       }
     }
     else if ($strategy === 'creation_date')
@@ -214,8 +214,8 @@ class RenameMedias
     }
     else if ($strategy === 'video_creation_date')
     {
-      exec('ffprobe "' . $path . '" 2>&1', $stdout_lines);
-      foreach($stdout_lines as $line)
+      exec('ffprobe "' . $path . '" 2>&1', $stdoutLines);
+      foreach($stdoutLines as $line)
       {
         preg_match_all('#creation_time *: *([0-9\-A-Z:.]+)#', $line, $matches);
         if (!empty($matches[1][0]))
@@ -237,8 +237,8 @@ class RenameMedias
     else if ($strategy === 'mp3_duration')
     {
       $filename = self::getFilename($path);
-      exec('ffprobe "' . $path . '" 2>&1', $stdout_lines);
-      foreach($stdout_lines as $line)
+      exec('ffprobe "' . $path . '" 2>&1', $stdoutLines);
+      foreach($stdoutLines as $line)
       {
         preg_match('#Duration: ([0-9]+):([0-9]+):([0-9]+).([0-9]+),#', $line, $matches);
         if (!empty($matches[2]) && !empty($matches[3]))
