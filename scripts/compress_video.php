@@ -47,9 +47,19 @@ foreach($args['_'] as $path)
   unset($ffProbeStout);
   exec('ffprobe -print_format json -show_format -show_streams "' . $path . '" 2>/dev/null', $ffProbeStout);
   $ffProbeData = json_decode(implode('', $ffProbeStout), true);
+  if (!is_array($ffProbeData) || json_last_error() !== JSON_ERROR_NONE)
+  {
+    $output[] = 'Error: Could not parse video metadata (invalid JSON)';
+    continue;
+  }
   if (empty($ffProbeData['streams']))
   {
-    $output[] = 'No streams found';
+    $output[] = 'Error: No streams found';
+    continue;
+  }
+  if (empty($ffProbeData['format']['duration']) || floatval($ffProbeData['format']['duration']) <= 0)
+  {
+    $output[] = 'Error: Invalid or missing video duration';
     continue;
   }
 
@@ -86,7 +96,9 @@ foreach($args['_'] as $path)
   // Transcode file with ffmpeg
   $params = [
     '-i "' . $path . '"',
-    '-map_metadata 0', // Copy global metadata
+    // Copy global metadata
+    // https://coderunner.io/how-to-compress-gopro-movies-and-keep-metadata/
+    '-map_metadata 0',
   ];
   if ($codec === 'h264')
   {
@@ -170,6 +182,8 @@ foreach($args['_'] as $path)
       }
     }
   }
+  // Map video/audio streams and preserve original handler names
+  // https://coderunner.io/how-to-compress-gopro-movies-and-keep-metadata/
   $dataStreamId = 0;
   foreach($ffProbeData['streams'] as $stream)
   {
@@ -210,18 +224,28 @@ foreach($args['_'] as $path)
       $seconds = $ffmpegData[4];
       $encodedDuration = $hours * 60 * 60 + $minutes * 60 + $seconds;
       $totalDuration = intval($ffProbeData['format']['duration']);
-      echo implode(' ', [
-        $encodedDuration . 's',
-        'transcoded on',
-        $totalDuration . 's',
-        '(' . intval($encodedDuration / $totalDuration * 100) . '% at ' . $fps . 'fps)',
-      ]) . "\r";
+      if ($totalDuration > 0)
+      {
+        echo implode(' ', [
+          $encodedDuration . 's',
+          'transcoded on',
+          $totalDuration . 's',
+          '(' . intval($encodedDuration / $totalDuration * 100) . '% at ' . $fps . 'fps)',
+        ]) . "\r";
+      }
     }
   }
   echo "\n";
   $code = pclose($stream);
   if ($code !== 0)
   {
+    $output[] = 'Error: ffmpeg exited with code ' . $code;
+    $output[] = 'Last output: ' . $ffmpegStdout;
+    continue;
+  }
+  if (!file_exists($destPath))
+  {
+    $output[] = 'Error: Output file was not created';
     continue;
   }
   $originalFilesize = round(filesize($path) / 1000 / 1000, 2);
