@@ -18,14 +18,28 @@ if (!empty($args['help']) || count($args['_']) === 0) {
   exit(0);
 }
 
+$jpegFiles = [];
+$rawFiles = [];
+
 foreach($args['_'] as $arg) {
   $pathinfo = pathinfo($arg);
   if ($pathinfo['extension'] === 'jpg') {
-    compressJpeg($arg);
+    $jpegFiles[] = $arg;
   }
   else if (in_array($pathinfo['extension'], ['dng', 'pef', 'raw'])) {
-    convertRawToJpeg($arg);
+    $rawFiles[] = $arg;
   }
+}
+
+// Convert RAW files to JPEG first
+foreach($rawFiles as $arg) {
+  convertRawToJpeg($arg);
+  $jpegFiles[] = preg_replace('#\.(dng|pef|raw)$#', '.jpg', $arg);
+}
+
+// Compress all JPEGs in one batch
+if (!empty($jpegFiles)) {
+  compressJpeg($jpegFiles);
 }
 
 function convertRawToJpeg($filePath) {
@@ -35,16 +49,18 @@ function convertRawToJpeg($filePath) {
     return null;
   }
   runCommand('sips -s format jpeg "' . $filePath . '" -s formatOptions 100 --out "' . $destFilePath . '"');
-  compressJpeg($destFilePath);
 }
 
-// @todo run all images through the same jpegoptim instance? with parallel threads, see jpegoptim options
-function compressJpeg($filePath) {
+function compressJpeg($filePaths) {
   // Use a custom build of jpegoptim (from ImageOptim using mozjpeg) for better results
   // Context in https://github.com/ImageOptim/ImageOptim/issues/102#issuecomment-327311201
-  // @todo compile a more recent version
+  // @todo compile a more recent version to have --threads support
   $jpegoptimBin = __DIR__ . '/../bin/jpegoptim';
-  runCommand('"' . $jpegoptimBin . '" --max=85 --strip-none --totals "' . $filePath . '"');
+  
+  // Build command with all files at once
+  // Compress if it saves at least 2% of file size
+  $fileList = implode('" "', $filePaths);
+  runCommand('"' . $jpegoptimBin . '" --max=85 --strip-none --threshold=2 --totals "' . $fileList . '"');
 }
 
 function runCommand($command) {
