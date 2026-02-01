@@ -98,7 +98,7 @@ foreach($args['_'] as $path)
   if ($codec === 'hevc_videotoolbox')
   {
     $params[] = '-c:v hevc_videotoolbox';
-    $params[] = '-q:v ' . (!empty($args['quality']) ? intval($args['quality']) : 5O); // https://stackoverflow.com/a/69668183
+    $params[] = '-q:v ' . (!empty($args['quality']) ? intval($args['quality']) : 50); // https://stackoverflow.com/a/69668183
     $params[] = '-tag:v hvc1'; // Needed so macOS recognizes the media as HEVC (https://discussions.apple.com/thread/253196462)
   }
   // Extremely slow on mac m1 (1fps for 4k source)
