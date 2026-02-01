@@ -129,10 +129,13 @@ class RenameMedias
     }
     if ($strategy === 'exif_date')
     {
-      $exif = @exif_read_data($path);
-      if (!empty($exif['DateTimeOriginal']) && substr($exif['DateTimeOriginal'], 0, 4) !== '0000')
+      // Use exiftool instead of exif_read_data() for better compatibility with HEIC
+      $stdout_lines = [];
+      $command = 'exiftool -DateTimeOriginal -d "%Y-%m-%d-%H%M%S" -s -s -s ' . escapeshellarg($path) . ' 2>/dev/null';
+      exec($command, $stdout_lines);
+      if (!empty($stdout_lines[0]) && substr($stdout_lines[0], 0, 4) !== '0000')
       {
-        return date('Y-m-d-His', strtotime($exif['DateTimeOriginal']));
+        return $stdout_lines[0];
       }
     }
     else if ($strategy === 'creation_date')

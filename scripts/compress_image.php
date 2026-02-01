@@ -9,10 +9,10 @@ if (!empty($args['help']) || count($args['_']) === 0) {
   echo implode("\n", [
     str_repeat('-', 30),
     'Compress images (jpeg 85%) without stripping EXIF tags',
-    '(Compressing a RAW image will generate a corresponding jpeg file, and keep the original)',
+    '(Compressing a RAW or HEIC image will generate a corresponding jpeg file, and keep the original)',
     str_repeat('-', 30),
     'Usage:',
-    '$ compress_image file1.jpg file2.jpg file3.pef file4.dng',
+    '$ compress_image file1.jpg file2.jpg file3.pef file4.dng file5.heic',
     str_repeat('-', 30),
   ]) . "\n";
   exit(0);
@@ -26,7 +26,7 @@ foreach($args['_'] as $arg) {
   if ($pathinfo['extension'] === 'jpg') {
     $jpegFiles[] = $arg;
   }
-  else if (in_array($pathinfo['extension'], ['dng', 'pef', 'raw'])) {
+  else if (in_array($pathinfo['extension'], ['dng', 'pef', 'raw', 'heic'])) {
     $rawFiles[] = $arg;
   }
 }
@@ -34,7 +34,7 @@ foreach($args['_'] as $arg) {
 // Convert RAW files to JPEG first
 foreach($rawFiles as $arg) {
   convertRawToJpeg($arg);
-  $jpegFiles[] = preg_replace('#\.(dng|pef|raw)$#', '.jpg', $arg);
+  $jpegFiles[] = preg_replace('#\.(dng|pef|raw|heic)$#', '.jpg', $arg);
 }
 
 // Compress all JPEGs in one batch
@@ -43,7 +43,7 @@ if (!empty($jpegFiles)) {
 }
 
 function convertRawToJpeg($filePath) {
-  $destFilePath = preg_replace('#\.(dng|pef|raw)$#', '.jpg', $filePath);
+  $destFilePath = preg_replace('#\.(dng|pef|raw|heic)$#', '.jpg', $filePath);
   if (is_readable($destFilePath)) {
     echo '⚠️ ' . $destFilePath . ' already exists, skipping' . "\n";
     return null;
