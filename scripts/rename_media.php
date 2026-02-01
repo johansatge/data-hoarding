@@ -7,7 +7,6 @@ $args = parse_argv();
 $strategies = ['none', 'exif_date', 'creation_date', 'video_creation_date', 'oneplus_media', 'samsung_media', 'mp3_duration', 'nintendo_switch'];
 $strategy = !empty($args['strategy']) && in_array($args['strategy'], $strategies) ? $args['strategy'] : false;
 $suffix = !empty($args['suffix']) ? $args['suffix'] : false;
-$dry_run = !empty($args['dry-run']);
 
 if (!empty($args['help']) || count($args['_']) === 0 || empty($strategy))
 {
@@ -19,7 +18,6 @@ if (!empty($args['help']) || count($args['_']) === 0 || empty($strategy))
     '$ rename_media file1.jpg file2.jpg [--options]',
     str_repeat('-', 30),
     'Options:',
-    '--dry-run           Display results without renaming the files',
     '--strategy=[string] Choose a strategy to get the file date:',
     '                    none                 Keep the same filename',
     '                                         Useful to add a suffix to existing files',
@@ -37,42 +35,98 @@ if (!empty($args['help']) || count($args['_']) === 0 || empty($strategy))
   exit(0);
 }
 
-RenameMedias::exec($args['_'], $strategy, $suffix, $dry_run);
+RenameMedias::exec($args['_'], $strategy, $suffix);
 
 class RenameMedias
 {
 
   private static $updatedPaths = [];
 
-  public static function exec($paths, $strategy, $suffix, $dry_run)
+  public static function exec($paths, $strategy, $suffix)
   {
-    $duplicates = 0;
-    $renamed = 0;
-    $already_named = 0;
+    // First pass: plan all renames
+    $plan = [];
+    self::$updatedPaths = [];
+    $i = 0;
     foreach($paths as $path)
     {
-      $data = self::renameFile($path, $strategy, $suffix, $dry_run);
-      echo $data['name'] . ' => ' . $data['updated_name'] . ' ' . self::getEmoji($data) . "\n";
-      $duplicates += $data['is_duplicate'] ? 1 : 0;
-      $renamed += $data['is_already_named'] ? 0 : 1;
-      $already_named += $data['is_already_named'] ? 1 : 0;
+      $i++;
+      echo "\rAnalyzing $i/" . count($paths) . ' files';
+      $data = self::planFileRename($path, $strategy, $suffix);
+      $plan[] = $data;
+      self::$updatedPaths[] = $data['updated_path'];
     }
-    echo count($paths) . ' files.' . ($dry_run ? ' (dry run)' : '') . "\n";
-    echo $renamed . ' renamed. (' . $duplicates . ' duplicates)' . "\n";
+    echo "\n";
+
+    // Display planned changes
+    echo "\nPlanned changes:\n";
+    $duplicates = 0;
+    $to_rename = 0;
+    $already_named = 0;
+    foreach($plan as $data)
+    {
+      echo $data['source_name'] . ' => ' . $data['updated_name'] . ' ' . self::getEmoji($data) . "\n";
+      $duplicates += $data['is_duplicate'] ? 1 : 0;
+      $already_named += $data['is_already_named'] ? 1 : 0;
+      $to_rename += $data['is_already_named'] ? 0 : 1;
+    }
+    echo count($paths) . ' files.' . "\n";
+    echo $to_rename . ' will be renamed. (' . $duplicates . ' duplicates)' . "\n";
     echo $already_named . ' already named.' . "\n";
+
+    // Ask for confirmation
+    if ($to_rename === 0)
+    {
+      echo "\nNo changes needed.\n";
+      exit(0);
+    }
+
+    echo "\nProceed with renaming? (yes/no) ";
+    $confirm = trim(fgets(STDIN));
+    if (strtolower($confirm) !== 'yes' && strtolower($confirm) !== 'y')
+    {
+      echo "Cancelled.\n";
+      exit(0);
+    }
+
+    // Second pass: execute renames
+    $i = 0;
+    foreach($plan as $data)
+    {
+      $i++;
+      echo "\rRenaming $i/" . count($plan) . ' files';
+      if (!$data['is_already_named'])
+      {
+        self::executeRename($data, $strategy);
+      }
+    }
+    echo "\n";
+
+    echo "Done.\n";
     exit(0);
+  }
+
+  private static function executeRename($data, $strategy)
+  {
+    $source_path = $data['source_path'];
+    $target_path = $data['updated_path'];
+    rename($source_path, $target_path);
+    if ($strategy === 'exif_date')
+    {
+      self::writeOriginalFilenameInExif($target_path, $data['source_name']);
+    }
   }
 
   private static function getEmoji($data)
   {
     if ($data['is_already_named'])
     {
-      return '❎';
+      return '✅';
     }
-    return $data['is_duplicate'] ? '⚠️' : '✅';
+    return $data['is_duplicate'] ? '⚠️' : '🖍️';
   }
 
-  private static function renameFile($path, $strategy, $suffix, $dry_run)
+  private static function planFileRename($path, $strategy, $suffix)
   {
     $info = pathinfo($path);
     $ext = str_replace('jpeg', 'jpg', strtolower($info['extension']));
@@ -90,42 +144,39 @@ class RenameMedias
 
     $is_duplicate = false;
     $is_already_named = false;
-    if ($path === $updated_path)
+    
+    if (basename($path) === basename($updated_path))
     {
       $is_already_named = true;
     }
     else
     {
-      // When looking for duplicates, exclude files that have the same name before & after
-      // (it probably means we just rename the extension)
-      // We can't just rely on is_readable() because it's case insensitive on macOS,
-      // so it would generate a false posivite for IMG12345.JPG -> ING12345.jpg
-      if ($info['filename'] !== $new_filename && (is_readable($updated_path) || in_array($updated_path, self::$updatedPaths)))
-      {
+      if (self::isReadableMacOS($updated_path) || in_array($updated_path, self::$updatedPaths)) {
         $is_duplicate = true;
         $uniq = substr(md5_file($path), 0, 6);
         $updated_path = $info['dirname'] . '/' . $new_filename . '_' . $uniq . '.' . $ext;
       }
-      if (!$dry_run)
-      {
-        rename($path, $updated_path);
-        if ($strategy === 'exif_date')
-        {
-          self::writeOriginalFilenameInExif($updated_path, $original_filename);
-        }
-      }
     }
 
-    self::$updatedPaths[] = $updated_path;
-
     return [
-      'name'             => $original_filename,
-      'updated_name'     => self::getFilename($updated_path),
-      'is_duplicate'     => $is_duplicate,
+      'source_name' => $original_filename,
+      'updated_name' => self::getFilename($updated_path),
+      'source_path' => $path,
+      'updated_path' => $updated_path,
+      'is_duplicate' => $is_duplicate,
       'is_already_named' => $is_already_named,
     ];
   }
 
+  // macOS is case-insensitive by default, so is_readable() may return true
+  // even if the exact filename does not exist;
+  // we check for the exact filename in the parent directory instead
+  private static function isReadableMacOS($path) {
+    $dir = dirname($path);
+    $filename = basename($path);
+    $existingFilenames = array_map('basename', glob($dir . '/*'));
+    return in_array($filename, $existingFilenames);
+  }
 
   private static function writeOriginalFilenameInExif($path, $original_filename)
   {

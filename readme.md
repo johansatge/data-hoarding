@@ -99,7 +99,6 @@ Usage:
 $ rename_media file1.jpg file2.jpg [--options]
 ------------------------------
 Options:
---dry-run           Display results without renaming the files
 --strategy=[string] Choose a strategy to get the file date:
                     none                 Keep the same filename
                                          Useful to add a suffix to existing files
