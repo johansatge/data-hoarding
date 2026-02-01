@@ -108,17 +108,34 @@ class RenameMedias
       if (!$dry_run)
       {
         rename($path, $updated_path);
+        if ($strategy === 'exif_date')
+        {
+          self::writeOriginalFilenameInExif($updated_path, self::getFilename($path));
+        }
       }
     }
 
     self::$updatedPaths[] = $updated_path;
 
     return [
-      'name'             => self::getFilename($path),
+      'name'             => $original_filename,
       'updated_name'     => self::getFilename($updated_path),
       'is_duplicate'     => $is_duplicate,
       'is_already_named' => $is_already_named,
     ];
+  }
+
+
+  private static function writeOriginalFilenameInExif($path, $original_filename)
+  {
+    $marker = 'Original filename: ' . $original_filename;
+    $stdout_lines = [];
+    $read_command = 'exiftool -UserComment -s -s -s ' . escapeshellarg($path) . ' 2>/dev/null';
+    exec($read_command, $stdout_lines);
+    $existing = !empty($stdout_lines[0]) ? trim($stdout_lines[0]) : '';
+    $new_value = $existing !== '' ? $existing . "\n" . $marker : $marker;
+    $write_command = 'exiftool -overwrite_original -UserComment=' . escapeshellarg($new_value) . ' ' . escapeshellarg($path) . ' 2>/dev/null';
+    exec($write_command);
   }
 
   private static function getFilenameByStrategy($path, $strategy)
