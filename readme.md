@@ -58,7 +58,7 @@ Options:
 --x265              Re-encode the video with libx265 (instead of hevc_videotoolbox) (very slow)
 --force-1080p       Re-encode in 1080p
 --fps=[number]      Force FPS (default is to stick to source)
---quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 50)
+--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 60)
 --speed=[number]    Speed up the video (e.g., x2, x4, x8)
 --no-audio          Remove audio track
 ------------------------------

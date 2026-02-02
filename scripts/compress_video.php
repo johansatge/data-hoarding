@@ -34,7 +34,7 @@ if (!empty($args['help']) || count($args['_']) === 0)
     '--x265              Re-encode the video with libx265 (instead of hevc_videotoolbox) (very slow)',
     '--force-1080p       Re-encode in 1080p',
     '--fps=[number]      Force FPS (default is to stick to source)',
-    '--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 50)',
+    '--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 60)',
     '--speed=[number]    Speed up the video (e.g., x2, x4, x8)',
     '--no-audio          Remove audio track',
     str_repeat('-', 30),
@@ -93,7 +93,7 @@ foreach($args['_'] as $path)
   if ($codec === 'hevc_videotoolbox')
   {
     $params[] = '-c:v hevc_videotoolbox';
-    $params[] = '-q:v ' . (!empty($args['quality']) ? intval($args['quality']) : 50); // https://stackoverflow.com/a/69668183
+    $params[] = '-q:v ' . (!empty($args['quality']) ? intval($args['quality']) : 60); // https://stackoverflow.com/a/69668183
     $params[] = '-tag:v hvc1'; // Needed so macOS recognizes the media as HEVC (https://discussions.apple.com/thread/253196462)
   }
   // Extremely slow on mac m1 (1fps for 4k source)
