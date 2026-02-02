@@ -59,6 +59,7 @@ Options:
 --force-1080p       Re-encode in 1080p
 --fps=[number]      Force FPS (default is to stick to source)
 --quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 60)
+                    If 60 doesn't compress enough (a snowy GoPro video for instance) try 50
 --speed=[number]    Speed up the video (e.g., x2, x4, x8)
 --no-audio          Remove audio track
 ------------------------------

@@ -35,6 +35,7 @@ if (!empty($args['help']) || count($args['_']) === 0)
     '--force-1080p       Re-encode in 1080p',
     '--fps=[number]      Force FPS (default is to stick to source)',
     '--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 60)',
+    '                    If 60 doesn\'t compress enough (a snowy GoPro video for instance) try 50',
     '--speed=[number]    Speed up the video (e.g., x2, x4, x8)',
     '--no-audio          Remove audio track',
     str_repeat('-', 30),
@@ -222,14 +223,26 @@ foreach($args['_'] as $path)
   }
   if (!is_readable($destPath))
   {
-    $output[] = 'Error:Output file was not created';
+    $output[] = 'Error: Output file was not created';
     continue;
   }
   $originalFilesize = round(filesize($path) / 1000 / 1000, 2);
   $destFilesize = round(filesize($destPath) / 1000 / 1000, 2);
+  $compressionRatio = ($originalFilesize - $destFilesize) / $originalFilesize * 100;
+  $isWorthwile = $compressionRatio >= 10; // at least 10% smaller
   $output[] = 'Elapsed time:      ' . (time() - $start_time) . 's';
   $output[] = 'Original filesize: ' . $originalFilesize . 'M';
   $output[] = 'New filesize:      ' . $destFilesize . 'M';
+  $output[] = 'Compression ratio: ' . round($compressionRatio, 1) . '% ' . ($isWorthwile ? '✅' : '⚠️');
+
+  // Revert if compressed file is bigger or compression is less than 5%
+  if (!$isWorthwile)
+  {
+    unlink($destPath);
+    $output[] = str_repeat('-', 20);
+    continue;
+  }
+
   $output[] = str_repeat('-', 20);
   rename($path, $origPath);
   rename($destPath, preg_replace('#\.out\.mp4$#', '.mp4', $destPath));
