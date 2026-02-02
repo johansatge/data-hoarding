@@ -133,7 +133,7 @@ foreach($args['_'] as $path)
   // Audio track
   if (empty($args['no-audio']))
   {
-    $params[] = '-map 0:a:0';
+    $params[] = '-map 0:a:0?'; // "?" -> only map if audio stream exists
     $params[] = '-c:a aac';
     $params[] = '-b:a 192k';
     // Apply audio speed adjustment if --speed is set
