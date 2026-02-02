@@ -1,6 +1,11 @@
 <?php
 
 /**
+ * Transcode video files with ffmpeg
+ * - Video track with the right encoder and quality
+ * - Audio track with AAC & fixed quality (or no audio track)
+ * - GoPro metadata track if available
+ *
  * Resources:
  * - https://coderunner.io/how-to-compress-gopro-movies-and-keep-metadata/
  * - https://github.com/gopro/gpmf-parser
@@ -32,14 +37,12 @@ if (!empty($args['help']) || count($args['_']) === 0)
     '--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 50)',
     '--speed=[number]    Speed up the video (e.g., x2, x4, x8)',
     '--no-audio          Remove audio track',
-    '--with-metadata     Export video metadata to JSON file (GPS, accelerometer, etc.)',
     str_repeat('-', 30),
   ]) . "\n";
   exit(0);
 }
 
 $codec = isset($args['h264']) ? 'h264' : (isset($args['x265']) ? 'x265' : 'hevc_videotoolbox');
-$withMetadata = isset($args['with-metadata']);
 
 foreach($args['_'] as $path)
 {
@@ -71,35 +74,15 @@ foreach($args['_'] as $path)
     continue;
   }
 
-  // Extract metadata tracks with ffprobe (like GoPro GPS & accelerometer tracks)
-  // -ee to parse all metadata/streams
-  // -g3 to keep hierarchy in streams
-  unset($exiftoolStdout);
-  if ($withMetadata)
-  {
-    exec('exiftool -ee -g3 -b -json "' . $path . '"', $exiftoolStdout);
-    $exiftoolData = json_decode(implode('', $exiftoolStdout), true);
-    if (empty($exiftoolData[0]['SourceFile']))
-    {
-      $output[] = 'Could not read file metadata';
-      continue;
-    }
-    $dataPath = preg_replace('#\.([^.]+)$#i', '.json', $path);
-    if (is_readable($dataPath))
-    {
-      $output[] = 'Metadata file already exists';
-      continue;
-    }
-    file_put_contents($dataPath, json_encode($exiftoolData[0], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
-  }
-
-  // Transcode file with ffmpeg
+  // Build ffmpeg command
   $params = [
     '-i "' . $path . '"',
     // Copy global metadata
     // https://coderunner.io/how-to-compress-gopro-movies-and-keep-metadata/
     '-map_metadata 0',
   ];
+
+  // Codec params & quality
   if ($codec === 'h264')
   {
     $params[] = '-c:v libx264';
@@ -124,7 +107,7 @@ foreach($args['_'] as $path)
     $params[] = '-tag:v hvc1'; // Needed so macOS recognizes the media as HEVC (https://discussions.apple.com/thread/253196462)
   }
   
-  // Build video filters
+  // Video filters
   $videoFilters = [];
   if (!empty($args['speed']))
   {
@@ -146,12 +129,11 @@ foreach($args['_'] as $path)
   {
     $params[] = '-filter:v "' . implode(',', $videoFilters) . '"';
   }
-  if (!empty($args['no-audio']))
+
+  // Audio track
+  if (empty($args['no-audio']))
   {
-    $params[] = '-an'; // Drop all audio streams
-  }
-  else
-  {
+    $params[] = '-map 0:a:0';
     $params[] = '-c:a aac';
     $params[] = '-b:a 192k';
     // Apply audio speed adjustment if --speed is set
@@ -182,24 +164,24 @@ foreach($args['_'] as $path)
       }
     }
   }
-  // Map video/audio streams and preserve original handler names
-  // https://coderunner.io/how-to-compress-gopro-movies-and-keep-metadata/
-  $dataStreamId = 0;
-  foreach($ffProbeData['streams'] as $stream)
+
+  // Video track
+  $params[] = '-map 0:v:0';
+
+  // GoPro GPMF track if available
+  foreach($ffProbeData['streams'] as $streamIndex => $stream)
   {
     $codecType = !empty($stream['codec_type']) ? $stream['codec_type'] : '';
-    $handlerName = !empty($stream['tags']['handler_name']) ? $stream['tags']['handler_name'] : '';
-    // Map video/audio from input file 0 & save original handler if possible
-    if ($codecType === 'video' || $codecType === 'audio')
+    $codecTag = !empty($stream['codec_tag_string']) ? $stream['codec_tag_string'] : '';
+    if ($codecType === 'data' && $codecTag === 'gpmd')
     {
-      $shortCodecType = substr($codecType, 0, 1);
-      $params[] = '-map 0:' . $shortCodecType;
-      if (!empty($handlerName))
-      {
-        $params[] = '-metadata:s:' . $shortCodecType . ': handler="' . trim($handlerName) . '"';
-      }
+      $params[] = '-map 0:' . $streamIndex;
+      $params[] = '-c:d copy';
+      break;
     }
   }
+
+  // Final command
   $command = 'ffmpeg';
   foreach($params as $param)
   {
@@ -211,27 +193,22 @@ foreach($args['_'] as $path)
   echo str_repeat('-', 20) . "\n";
   $start_time = time();
   $stream = popen($command . ' 2>&1', 'r');
+  $ffmpegFullOutput = '';
   while (!feof($stream))
   {
     $ffmpegStdout = fread($stream, 4096);
+    $ffmpegFullOutput .= $ffmpegStdout;
     flush();
     preg_match('#fps=([ 0-9]+).*time=([0-9]+):([0-9]+):([0-9]+).([0-9]+)#', $ffmpegStdout, $ffmpegData);
     if (!empty($ffmpegData[0]))
     {
       $fps = floatval(trim($ffmpegData[1]));
-      $hours = $ffmpegData[2];
-      $minutes = $ffmpegData[3];
-      $seconds = $ffmpegData[4];
-      $encodedDuration = $hours * 60 * 60 + $minutes * 60 + $seconds;
+      $encodedDuration = $ffmpegData[2] * 60 * 60 + $ffmpegData[3] * 60 + $ffmpegData[4];
       $totalDuration = intval($ffProbeData['format']['duration']);
       if ($totalDuration > 0)
       {
-        echo implode(' ', [
-          $encodedDuration . 's',
-          'transcoded on',
-          $totalDuration . 's',
-          '(' . intval($encodedDuration / $totalDuration * 100) . '% at ' . $fps . 'fps)',
-        ]) . "\r";
+        $percent = intval($encodedDuration / $totalDuration * 100);
+        echo $encodedDuration . 's transcoded on ' . $totalDuration . 's (' . $percent . '% at ' . $fps . 'fps)' . "\r";
       }
     }
   }
@@ -240,12 +217,12 @@ foreach($args['_'] as $path)
   if ($code !== 0)
   {
     $output[] = 'Error: ffmpeg exited with code ' . $code;
-    $output[] = 'Last output: ' . $ffmpegStdout;
+    $output[] = $ffmpegFullOutput;
     continue;
   }
-  if (!file_exists($destPath))
+  if (!is_readable($destPath))
   {
-    $output[] = 'Error: Output file was not created';
+    $output[] = 'Error:Output file was not created';
     continue;
   }
   $originalFilesize = round(filesize($path) / 1000 / 1000, 2);

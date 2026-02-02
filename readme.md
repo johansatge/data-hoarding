@@ -61,7 +61,6 @@ Options:
 --quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 50)
 --speed=[number]    Speed up the video (e.g., x2, x4, x8)
 --no-audio          Remove audio track
---with-metadata     Export video metadata to JSON file (GPS, accelerometer, etc.)
 ------------------------------
 ```
 
