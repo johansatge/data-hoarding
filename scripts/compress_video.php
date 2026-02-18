@@ -36,7 +36,7 @@ if (!empty($args['help']) || count($args['_']) === 0)
     '--fps=[number]      Force FPS (default is to stick to source)',
     '--quality=[number]  Encoding quality (CRF with x264, Constant Quality with HEVC) (defaults: 25, 60)',
     '                    If 60 doesn\'t compress enough (a snowy GoPro video for instance) try 50',
-    '--speed=[number]    Speed up the video (e.g., x2, x4, x8)',
+    '--speed=[number]    Speed up the video (e.g., x2, x4, x8) (will also remove audio track)',
     '--no-audio          Remove audio track',
     str_repeat('-', 30),
   ]) . "\n";
@@ -44,6 +44,7 @@ if (!empty($args['help']) || count($args['_']) === 0)
 }
 
 $codec = isset($args['h264']) ? 'h264' : (isset($args['x265']) ? 'x265' : 'hevc_videotoolbox');
+$speed = !empty($args['speed']) ? floatval(preg_replace('/[^0-9.]/', '', $args['speed'])) : 1;
 
 foreach($args['_'] as $path)
 {
@@ -68,7 +69,8 @@ foreach($args['_'] as $path)
   }
 
   $origPath = preg_replace('#\.([^.]+)$#i', '.orig.$1', $path);
-  $destPath = preg_replace('#\.([^.]+)$#i', '.out.mp4', $path);
+  $destPath = preg_replace('#\.([^.]+)$#i', ($speed > 1 ? ' x' . $speed : '') . '.out.mp4', $path);
+  
   if (file_exists($destPath))
   {
     $output[] = 'Destination file already exists';
@@ -110,13 +112,9 @@ foreach($args['_'] as $path)
   
   // Video filters
   $videoFilters = [];
-  if (!empty($args['speed']))
+  if ($speed > 1)
   {
-    $speed = floatval(preg_replace('/[^0-9.]/', '', $args['speed']));
-    if ($speed > 0)
-    {
-      $videoFilters[] = 'setpts=' . (1 / $speed) . '*PTS';
-    }
+    $videoFilters[] = 'setpts=' . (1 / $speed) . '*PTS';
   }
   if (!empty($args['force-1080p']))
   {
@@ -132,38 +130,11 @@ foreach($args['_'] as $path)
   }
 
   // Audio track
-  if (empty($args['no-audio']))
+  if (empty($args['no-audio']) && $speed === 1)
   {
     $params[] = '-map 0:a:0?'; // "?" -> only map if audio stream exists
     $params[] = '-c:a aac';
     $params[] = '-b:a 192k';
-    // Apply audio speed adjustment if --speed is set
-    // (Sonnet added this, to be tested with a real video with sound)
-    if (!empty($args['speed']))
-    {
-      $speed = floatval(preg_replace('/[^0-9.]/', '', $args['speed']));
-      if ($speed > 0 && $speed <= 2)
-      {
-        // atempo accepts values between 0.5 and 2.0
-        $params[] = '-filter:a "atempo=' . $speed . '"';
-      }
-      elseif ($speed > 2)
-      {
-        // For speed > 2, chain multiple atempo filters
-        $audioFilters = [];
-        $remainingSpeed = $speed;
-        while ($remainingSpeed > 2)
-        {
-          $audioFilters[] = 'atempo=2.0';
-          $remainingSpeed /= 2;
-        }
-        if ($remainingSpeed > 1)
-        {
-          $audioFilters[] = 'atempo=' . $remainingSpeed;
-        }
-        $params[] = '-filter:a "' . implode(',', $audioFilters) . '"';
-      }
-    }
   }
 
   // Video track
