@@ -4,7 +4,7 @@ date_default_timezone_set('Europe/Paris');
 
 require('parse_argv.php');
 $args = parse_argv();
-$strategies = ['none', 'exif_date', 'creation_date', 'video_creation_date', 'oneplus_media', 'samsung_media', 'mp3_duration', 'nintendo_switch'];
+$strategies = ['none', 'exif_date', 'creation_date', 'video_creation_date', 'oneplus_media', 'samsung_media', 'mp3_duration', 'nintendo_switch', 'trail_camera_osd'];
 $strategy = !empty($args['strategy']) && in_array($args['strategy'], $strategies) ? $args['strategy'] : false;
 $suffix = !empty($args['suffix']) ? $args['suffix'] : false;
 
@@ -29,6 +29,7 @@ if (!empty($args['help']) || count($args['_']) === 0 || empty($strategy))
     '                    samsung_media        Use the name of the file (20220119_225029.mp4)',
     '                    mp3_duration         Append the duration of the mp3 audio to the filename',
     '                    nintendo_switch       Use the name of the file (2020032820112600-02CB906EA538A35643C1E1484C4B947D.jpg)',
+    '                    trail_camera_osd      Use the date from the OSD overlay on the first frame',
     '--suffix=[string]   Add a suffix to the final filename',
     str_repeat('-', 30),
   ]) . "\n";
@@ -251,6 +252,23 @@ class RenameMedias
     {
       $filename = self::getFilename($path);
       return preg_replace('#^([0-9]{4})([0-9]{2})([0-9]{2})([0-9]{8})-[0-9A-F]+\.(jpg|mp4)$#', '$1-$2-$3-$4', $filename);
+    }
+    else if ($strategy === 'trail_camera_osd')
+    {
+      $framePath = tempnam(sys_get_temp_dir(), 'frame_') . '.jpg';
+      exec('ffmpeg -i ' . escapeshellarg($path) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($framePath) . ' 2>/dev/null');
+      if (!file_exists($framePath)) return false;
+      $ocrLines = [];
+      // --psm 11: sparse text, finds text anywhere in the image without assuming any layout
+      // --psm 6: single uniform block of text, good for OSD overlay at the top or bottom of the image
+      exec('tesseract ' . escapeshellarg($framePath) . ' stdout --psm 6 2>/dev/null', $ocrLines);
+      unlink($framePath);
+      $text = implode(' ', $ocrLines);
+      if (preg_match('/(\d{4})[\/\-](\d{2})[\/\-](\d{2})\s+(\d{2}):(\d{2}):(\d{2})/', $text, $m))
+      {
+        return $m[1] . '-' . $m[2] . '-' . $m[3] . '-' . $m[4] . $m[5] . $m[6];
+      }
+      return false;
     }
     return false;
   }
