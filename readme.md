@@ -17,6 +17,7 @@
 
 * Install `ffmpeg`: `brew install ffmpeg --with-libvidstab`
 * Install `exiftool`: `brew install exiftool`
+* Install `tesseract`: `brew install tesseract`
 * Clone the project: `git clone git@github.com:johansatge/data-hoarding.git`
 
 Then, source the aliases in the shell (in `~/.zshrc` for instance):
@@ -110,6 +111,7 @@ Options:
                     samsung_media        Use the name of the file (20220119_225029.mp4)
                     mp3_duration         Append the duration of the mp3 audio to the filename
                     nintendo_switch      Use the name of the file (2020032820112600-02CB906EA538A35643C1E1484C4B947D.jpg)
+                    trail_camera_osd     Use the date from the OSD overlay on the first frame
 --suffix=[string]   Add a suffix to the final filename
 ------------------------------
 ```
