@@ -15,7 +15,7 @@ if (!empty($args['help']) || count($args['_']) === 0 || (!$needsStack && !$needs
     'Assemble Viofo dashcam videos (format: YYYY_MMDD_HHIISS_XXXXZ.MP4) (with XXXX being a numeric index and Z being [F]ront or [R]ear)',
     str_repeat('-', 30),
     'Usage:',
-    '$ assemble_dascham_viofo path/to/mp4/files',
+    '$ assemble_dascham_viofo file1F.MP4 file2F.MP4 file1R.MP4 file2R.MP4',
     str_repeat('-', 30),
     'Options:',
     '--stack    Stack vertically front and rear videos',
@@ -25,17 +25,20 @@ if (!empty($args['help']) || count($args['_']) === 0 || (!$needsStack && !$needs
   exit(0);
 }
 
-$dir = $args['_'][0];
+$allFiles = $args['_'];
+$frontFiles = array_values(array_filter($allFiles, fn($f) => preg_match('/F\.MP4$/i', $f)));
+$rearFiles = array_values(array_filter($allFiles, fn($f) => preg_match('/R\.MP4$/i', $f)));
+$outputDir = realpath(dirname($allFiles[0]));
+preg_match('/(\d{4}_\d{4}_\d{6})/', basename($allFiles[0]), $m);
+$baseName = $m[1] ?? 'output';
 
 // Combine front
-$frontFiles = glob($dir . '/*F.MP4', GLOB_BRACE);
-$frontCombinedFile = realpath($dir) . '/_front.mp4';
+$frontCombinedFile = $outputDir . '/' . $baseName . '_front.mp4';
 combineFiles($frontFiles, $frontCombinedFile);
 
 // Combine rear
-$rearFiles = glob($dir . '/*R.MP4', GLOB_BRACE);
-$rearCombinedFile = realpath($dir) . '/_rear.mp4';
-$rearCombinedPaddedFile = realpath($dir) . '/_rear_padded.mp4';
+$rearCombinedFile = $outputDir . '/' . $baseName . '_rear.mp4';
+$rearCombinedPaddedFile = $outputDir . '/' . $baseName . '_rear_padded.mp4';
 combineFiles($rearFiles, $rearCombinedFile);
 
 // Overlay front & rear videos
@@ -45,7 +48,7 @@ if ($needsOverlay) {
     '-i "' . $rearCombinedFile . '"',
     '-filter_complex "[1:v]scale=800:450[overlay];[0:v][overlay]overlay=1740:20"',
     '-c:v libx264 -crf 15 -preset ultrafast',
-    '"' . realpath($dir) . '/_overlayed.mp4"',
+    '"' . $outputDir . '/' . $baseName . '_overlayed.mp4"',
   ]));
 
   unlink($frontCombinedFile);
@@ -83,7 +86,7 @@ if ($needsStack) {
     '-filter_complex "[0:v][1:v]vstack=inputs=2[v]"',
     '-map "[v]"',
     '-c:v libx264 -crf 15 -preset ultrafast',
-    '"' . realpath($dir) . '/_stacked.mp4"',
+    '"' . $outputDir . '/' . $baseName . '_stacked.mp4"',
   ]));
 
   unlink($frontCombinedFile);

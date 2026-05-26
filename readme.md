@@ -177,7 +177,7 @@ Options:
 Assemble Viofo dashcam videos (format: YYYY_MMDD_HHIISS_XXXXZ.MP4) (with XXXX being a numeric index and Z being [F]ront or [R]ear)
 ------------------------------
 Usage:
-$ assemble_dashcam_viofo path/to/mp4/files
+$ assemble_dashcam_viofo file1F.MP4 file2F.MP4 file1R.MP4 file2R.MP4
 ------------------------------
 Options:
 --stack    Stack vertically front and rear videos
