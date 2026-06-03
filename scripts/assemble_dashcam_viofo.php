@@ -2,27 +2,21 @@
 
 date_default_timezone_set('Europe/Paris');
 
-require('parse_argv.php');
+require(__DIR__ . '/../helpers/parse_argv.php');
+require(__DIR__ . '/../helpers/common.php');
 $args = parse_argv();
 
 $needsStack = !empty($args['stack']);
 $needsOverlay = !empty($args['overlay']);
 
-if (!empty($args['help']) || count($args['_']) === 0 || (!$needsStack && !$needsOverlay))
-{
-  echo implode("\n", [
-    str_repeat('-', 30),
-    'Assemble Viofo dashcam videos (format: YYYY_MMDD_HHIISS_XXXXZ.MP4) (with XXXX being a numeric index and Z being [F]ront or [R]ear)',
-    str_repeat('-', 30),
-    'Usage:',
-    '$ assemble_dascham_viofo file1F.MP4 file2F.MP4 file1R.MP4 file2R.MP4',
-    str_repeat('-', 30),
-    'Options:',
-    '--stack    Stack vertically front and rear videos',
-    '--overlay  Overlay rear on top of the right left corner of the front',
-    str_repeat('-', 30),
-  ]) . "\n";
-  exit(0);
+if (!empty($args['help']) || count($args['_']) === 0 || (!$needsStack && !$needsOverlay)) {
+  printHelpAndExit(
+    ['Assemble Viofo dashcam videos (format: YYYY_MMDD_HHIISS_XXXXZ.MP4) (with XXXX being a numeric index and Z being [F]ront or [R]ear)'],
+    ['Usage:', '$ assemble_dascham_viofo file1F.MP4 file2F.MP4 file1R.MP4 file2R.MP4'],
+    ['Options:',
+     '--stack    Stack vertically front and rear videos',
+     '--overlay  Overlay rear on top of the right left corner of the front']
+  );
 }
 
 $allFiles = $args['_'];
@@ -98,7 +92,7 @@ function combineFiles($filesList, $destFile) {
   $filesListText = '';
   $filesListTextPath = str_replace('.mp4', '.txt', $destFile);
   foreach($filesList as $file) {
-    $filesListText .= 'file \'' . realpath($file) . '\'\'' . "\n";
+    $filesListText .= 'file \'' . realpath($file) . '\'' . "\n";
   }
   file_put_contents($filesListTextPath, $filesListText);
   runCommand('ffmpeg ' . implode(' ', [
@@ -110,21 +104,4 @@ function combineFiles($filesList, $destFile) {
     '"' . $destFile . '"',
   ]));
   unlink($filesListTextPath);
-}
-
-function runCommand($command) {
-  echo str_repeat('-', 20) . "\n";
-  echo 'Running ' . $command . "\n";
-  echo str_repeat('-', 20) . "\n";
-  $stream = popen($command . ' 2>&1', 'r');
-  while (!feof($stream)) {
-    $stdout = fread($stream, 4096);
-    flush();
-    echo $stdout;
-  }
-  $code = pclose($stream);
-  echo 'Exited with code ' . $code . "\n";
-  if ($code !== 0) {
-    exit($code);
-  }
 }

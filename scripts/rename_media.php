@@ -2,55 +2,46 @@
 
 date_default_timezone_set('Europe/Paris');
 
-require('parse_argv.php');
+require(__DIR__ . '/../helpers/parse_argv.php');
+require(__DIR__ . '/../helpers/common.php');
 $args = parse_argv();
 $strategies = ['none', 'exif_date', 'creation_date', 'video_creation_date', 'oneplus_media', 'samsung_media', 'mp3_duration', 'nintendo_switch', 'trail_camera_osd'];
 $strategy = !empty($args['strategy']) && in_array($args['strategy'], $strategies) ? $args['strategy'] : false;
 $suffix = !empty($args['suffix']) ? $args['suffix'] : false;
 
-if (!empty($args['help']) || count($args['_']) === 0 || empty($strategy))
-{
-  echo implode("\n", [
-    str_repeat('-', 30),
-    'Rename images and movies by date (Y-M-D-H:i:s.ext)',
-    str_repeat('-', 30),
-    'Usage:',
-    '$ rename_media file1.jpg file2.jpg [--options]',
-    str_repeat('-', 30),
-    'Options:',
-    '--strategy=[string] Choose a strategy to get the file date:',
-    '                    none                 Keep the same filename',
-    '                                         Useful to add a suffix to existing files',
-    '                    exif_date            Use the DateTimeOriginal field from the EXIF',
-    '                    creation_date        Use the file creation date',
-    '                    video_creation_date  Use the movie creation date',
-    '                                         (extracted from the metadata with ffprobe)',
-    '                    oneplus_media        Use the name of the file (VID_20180413_115301.mp4, IMG_20180418_143440.jpg)',
-    '                    samsung_media        Use the name of the file (20220119_225029.mp4)',
-    '                    mp3_duration         Append the duration of the mp3 audio to the filename',
-    '                    nintendo_switch       Use the name of the file (2020032820112600-02CB906EA538A35643C1E1484C4B947D.jpg)',
-    '                    trail_camera_osd      Use the date from the OSD overlay on the first frame',
-    '--suffix=[string]   Add a suffix to the final filename',
-    str_repeat('-', 30),
-  ]) . "\n";
-  exit(0);
+if (!empty($args['help']) || count($args['_']) === 0 || empty($strategy)) {
+  printHelpAndExit(
+    ['Rename images and movies by date (Y-M-D-H:i:s.ext)'],
+    ['Usage:', '$ rename_media file1.jpg file2.jpg [--options]'],
+    ['Options:',
+     '--strategy=[string] Choose a strategy to get the file date:',
+     '                    none                 Keep the same filename',
+     '                                         Useful to add a suffix to existing files',
+     '                    exif_date            Use the DateTimeOriginal field from the EXIF',
+     '                    creation_date        Use the file creation date',
+     '                    video_creation_date  Use the movie creation date',
+     '                                         (extracted from the metadata with ffprobe)',
+     '                    oneplus_media        Use the name of the file (VID_20180413_115301.mp4, IMG_20180418_143440.jpg)',
+     '                    samsung_media        Use the name of the file (20220119_225029.mp4)',
+     '                    mp3_duration         Append the duration of the mp3 audio to the filename',
+     '                    nintendo_switch       Use the name of the file (2020032820112600-02CB906EA538A35643C1E1484C4B947D.jpg)',
+     '                    trail_camera_osd      Use the date from the OSD overlay on the first frame',
+     '--suffix=[string]   Add a suffix to the final filename']
+  );
 }
 
 RenameMedias::exec($args['_'], $strategy, $suffix);
 
-class RenameMedias
-{
+class RenameMedias {
 
   private static $updatedPaths = [];
 
-  public static function exec($paths, $strategy, $suffix)
-  {
+  public static function exec($paths, $strategy, $suffix) {
     // First pass: plan all renames
     $plan = [];
     self::$updatedPaths = [];
     $i = 0;
-    foreach($paths as $path)
-    {
+    foreach($paths as $path) {
       $i++;
       echo "\rAnalyzing $i/" . count($paths) . ' files';
       $data = self::planFileRename($path, $strategy, $suffix);
@@ -64,8 +55,7 @@ class RenameMedias
     $duplicates = 0;
     $toRename = 0;
     $alreadyNamed = 0;
-    foreach($plan as $data)
-    {
+    foreach($plan as $data) {
       echo $data['sourceName'] . ' => ' . $data['updatedName'] . ' ' . self::getEmoji($data) . "\n";
       $duplicates += $data['isDuplicate'] ? 1 : 0;
       $alreadyNamed += $data['isAlreadyNamed'] ? 1 : 0;
@@ -76,26 +66,22 @@ class RenameMedias
     echo $alreadyNamed . ' already named.' . "\n";
 
     // Ask for confirmation
-    if ($toRename === 0)
-    {
+    if ($toRename === 0) {
       echo "\nNo changes needed.\n";
       exit(0);
     }
 
     echo "\nProceed with renaming? (yes/no) ";
     $confirm = trim(fgets(STDIN));
-    if (strtolower($confirm) !== 'yes' && strtolower($confirm) !== 'y')
-    {
+    if (strtolower($confirm) !== 'yes' && strtolower($confirm) !== 'y') {
       echo "Cancelled.\n";
       exit(0);
     }
 
     // Second pass: execute renames
     $i = 0;
-    foreach($plan as $data)
-    {
-      if (!$data['isAlreadyNamed'])
-      {
+    foreach($plan as $data) {
+      if (!$data['isAlreadyNamed']) {
         $i++;
         echo "\rRenaming $i/" . $toRename . ' files';
         self::executeRename($data, $strategy);
@@ -107,35 +93,29 @@ class RenameMedias
     exit(0);
   }
 
-  private static function executeRename($data, $strategy)
-  {
+  private static function executeRename($data, $strategy) {
     $sourcePath = $data['sourcePath'];
     $targetPath = $data['updatedPath'];
     rename($sourcePath, $targetPath);
-    if ($strategy === 'exif_date')
-    {
+    if ($strategy === 'exif_date') {
       self::writeOriginalFilenameInExif($targetPath, $data['sourceName']);
     }
   }
 
-  private static function getEmoji($data)
-  {
-    if ($data['isAlreadyNamed'])
-    {
+  private static function getEmoji($data) {
+    if ($data['isAlreadyNamed']) {
       return '✅';
     }
     return $data['isDuplicate'] ? '⚠️' : '🖍️';
   }
 
-  private static function planFileRename($path, $strategy, $suffix)
-  {
+  private static function planFileRename($path, $strategy, $suffix) {
     $info = pathinfo($path);
     $ext = str_replace('jpeg', 'jpg', strtolower($info['extension']));
     $originalFilename = self::getFilename($path);
 
     $newFilename = self::getFilenameByStrategy($path, $strategy);
-    if ($newFilename === false)
-    {
+    if ($newFilename === false) {
       $newFilename = $info['filename'];
     }
 
@@ -145,13 +125,10 @@ class RenameMedias
 
     $isDuplicate = false;
     $isAlreadyNamed = false;
-    
-    if (basename($path) === basename($updatedPath))
-    {
+
+    if (basename($path) === basename($updatedPath)) {
       $isAlreadyNamed = true;
-    }
-    else
-    {
+    } else {
       if (self::isReadableMacOS($updatedPath) || in_array($updatedPath, self::$updatedPaths)) {
         $isDuplicate = true;
         $uniq = substr(md5_file($path), 0, 6);
@@ -179,8 +156,7 @@ class RenameMedias
     return in_array($filename, $existingFilenames);
   }
 
-  private static function writeOriginalFilenameInExif($path, $originalFilename)
-  {
+  private static function writeOriginalFilenameInExif($path, $originalFilename) {
     $marker = 'Original filename: ' . $originalFilename;
     $stdoutLines = [];
     $readCommand = 'exiftool -UserComment -s -s -s ' . escapeshellarg($path) . ' 2>/dev/null';
@@ -191,70 +167,48 @@ class RenameMedias
     exec($writeCommand);
   }
 
-  private static function getFilenameByStrategy($path, $strategy)
-  {
-    if ($strategy === 'none')
-    {
+  private static function getFilenameByStrategy($path, $strategy) {
+    if ($strategy === 'none') {
       return false;
     }
-    if ($strategy === 'exif_date')
-    {
+    if ($strategy === 'exif_date') {
       // Use exiftool instead of exif_read_data() for better compatibility with HEIC
       $stdoutLines = [];
       $command = 'exiftool -DateTimeOriginal -d "%Y-%m-%d-%H%M%S" -s -s -s ' . escapeshellarg($path) . ' 2>/dev/null';
       exec($command, $stdoutLines);
-      if (!empty($stdoutLines[0]) && substr($stdoutLines[0], 0, 4) !== '0000')
-      {
+      if (!empty($stdoutLines[0]) && substr($stdoutLines[0], 0, 4) !== '0000') {
         return $stdoutLines[0];
       }
-    }
-    else if ($strategy === 'creation_date')
-    {
+    } else if ($strategy === 'creation_date') {
       $time = filemtime($path);
       return !empty($time) ? date('Y-m-d-His', $time) : false;
-    }
-    else if ($strategy === 'video_creation_date')
-    {
+    } else if ($strategy === 'video_creation_date') {
       exec('ffprobe "' . $path . '" 2>&1', $stdoutLines);
-      foreach($stdoutLines as $line)
-      {
+      foreach($stdoutLines as $line) {
         preg_match_all('#creation_time *: *([0-9\-A-Z:.]+)#', $line, $matches);
-        if (!empty($matches[1][0]))
-        {
+        if (!empty($matches[1][0])) {
           return date('Y-m-d-His', strtotime($matches[1][0]));
         }
       }
-    }
-    else if ($strategy === 'oneplus_media')
-    {
+    } else if ($strategy === 'oneplus_media') {
       $filename = self::getFilename($path);
       return preg_replace('#^(VID_|IMG_)([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]+).(mp4|jpg)$#', '$2-$3-$4-$5', $filename);
-    }
-    else if ($strategy === 'samsung_media')
-    {
+    } else if ($strategy === 'samsung_media') {
       $filename = self::getFilename($path);
       return preg_replace('#^([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]+).(mp4|jpg)$#', '$1-$2-$3-$4', $filename);
-    }
-    else if ($strategy === 'mp3_duration')
-    {
+    } else if ($strategy === 'mp3_duration') {
       $filename = self::getFilename($path);
       exec('ffprobe "' . $path . '" 2>&1', $stdoutLines);
-      foreach($stdoutLines as $line)
-      {
+      foreach($stdoutLines as $line) {
         preg_match('#Duration: ([0-9]+):([0-9]+):([0-9]+).([0-9]+),#', $line, $matches);
-        if (!empty($matches[2]) && !empty($matches[3]))
-        {
+        if (!empty($matches[2]) && !empty($matches[3])) {
           return str_replace('.mp3', ' (' . $matches[2] . '.' . $matches[3] . ')', $filename);
         }
       }
-    }
-    else if ($strategy === 'nintendo_switch')
-    {
+    } else if ($strategy === 'nintendo_switch') {
       $filename = self::getFilename($path);
       return preg_replace('#^([0-9]{4})([0-9]{2})([0-9]{2})([0-9]{8})-[0-9A-F]+\.(jpg|mp4)$#', '$1-$2-$3-$4', $filename);
-    }
-    else if ($strategy === 'trail_camera_osd')
-    {
+    } else if ($strategy === 'trail_camera_osd') {
       $framePath = tempnam(sys_get_temp_dir(), 'frame_') . '.jpg';
       exec('ffmpeg -i ' . escapeshellarg($path) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($framePath) . ' 2>/dev/null');
       if (!file_exists($framePath)) return false;
@@ -264,8 +218,7 @@ class RenameMedias
       exec('tesseract ' . escapeshellarg($framePath) . ' stdout --psm 6 2>/dev/null', $ocrLines);
       unlink($framePath);
       $text = implode(' ', $ocrLines);
-      if (preg_match('/(\d{4})[\/\-](\d{2})[\/\-](\d{2})\s+(\d{2}):(\d{2}):(\d{2})/', $text, $m))
-      {
+      if (preg_match('/(\d{4})[\/\-](\d{2})[\/\-](\d{2})\s+(\d{2}):(\d{2}):(\d{2})/', $text, $m)) {
         return $m[1] . '-' . $m[2] . '-' . $m[3] . '-' . $m[4] . $m[5] . $m[6];
       }
       return false;
@@ -273,8 +226,7 @@ class RenameMedias
     return false;
   }
 
-  private static function getFilename($path)
-  {
+  private static function getFilename($path) {
     $info = pathinfo($path);
     return $info['filename'] . '.' . $info['extension'];
   }

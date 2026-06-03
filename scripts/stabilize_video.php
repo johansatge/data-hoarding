@@ -2,36 +2,29 @@
 
 date_default_timezone_set('Europe/Paris');
 
-require('parse_argv.php');
+require(__DIR__ . '/../helpers/parse_argv.php');
+require(__DIR__ . '/../helpers/common.php');
 $args = parse_argv();
 $input = count($args['_']) > 0 ? $args['_'][0] : '';
 
-if (!empty($args['help']) || empty($input))
-{
-  echo implode("\n", [
-    str_repeat('-', 30),
-    'Stabilize a video by using ffmpeg and vidstab (save file.mp4 to file.mp4.trf|file.stab.mp4|file.compare.mp4)',
-    str_repeat('-', 30),
-    'Usage:',
-    '$ stabilize_video file.mp4 [--options]',
-    str_repeat('-', 30),
-    'Options:',
-    '--analyze            Perform the analysis step (generate a file.mp4.trf file)',
-    '--stabilize          Stabilize the video by generating a file.stab.mp4 file (by using the trf file)',
-    '--compare            Merge file.mp4 and file.stab.mp4 in file.compare.mp4',
-    '--accuracy=[1-15]    Override accuracy value (vidstabdetect)',
-    '--shakiness=[1-10]   Override shakiness value (vidstabdetect)',
-    '--smoothing=[number] Override smoothing value (vidstabtransform)',
-    str_repeat('-', 30),
-  ]) . "\n";
-  exit(0);
+if (!empty($args['help']) || empty($input)) {
+  printHelpAndExit(
+    ['Stabilize a video by using ffmpeg and vidstab (save file.mp4 to file.mp4.trf|file.stab.mp4|file.compare.mp4)'],
+    ['Usage:', '$ stabilize_video file.mp4 [--options]'],
+    ['Options:',
+     '--analyze            Perform the analysis step (generate a file.mp4.trf file)',
+     '--stabilize          Stabilize the video by generating a file.stab.mp4 file (by using the trf file)',
+     '--compare            Merge file.mp4 and file.stab.mp4 in file.compare.mp4',
+     '--accuracy=[1-15]    Override accuracy value (vidstabdetect)',
+     '--shakiness=[1-10]   Override shakiness value (vidstabdetect)',
+     '--smoothing=[number] Override smoothing value (vidstabtransform)']
+  );
 }
 
 $stab = new StabilizeVideo($input, $args);
 $stab->execute();
 
-class StabilizeVideo
-{
+class StabilizeVideo {
 
   private $doAnalyze = false;
   private $doStabilize = false;
@@ -46,8 +39,7 @@ class StabilizeVideo
   private $pathStabilize;
   private $pathCompare;
 
-  public function __construct($input, $args)
-  {
+  public function __construct($input, $args) {
     $this->doAnalyze = !empty($args['analyze']) ? $args['analyze'] : false;
     $this->doStabilize = !empty($args['stabilize']) ? $args['stabilize'] : false;
     $this->doCompare = !empty($args['compare']) ? $args['compare'] : false;
@@ -62,34 +54,20 @@ class StabilizeVideo
     $this->pathCompare = preg_replace('#\.(mov|mp4)$#i', '.compare.$1', $this->path);
   }
 
-  public function execute()
-  {
-    if ($this->doAnalyze)
-    {
+  public function execute() {
+    if ($this->doAnalyze) {
       $command = 'ffmpeg -i "%s" -vf vidstabdetect=result="%s":shakiness=%d:accuracy=%d -f null -';
-      $this->execCommand(sprintf($command, $this->path, $this->pathAnalyze, $this->shakiness, $this->accuracy));
+      runCommand(sprintf($command, $this->path, $this->pathAnalyze, $this->shakiness, $this->accuracy));
     }
-    if ($this->doStabilize)
-    {
+    if ($this->doStabilize) {
       $command = 'ffmpeg -i "%s" -vf vidstabtransform=smoothing=%d:input="%s" "%s"';
-      $this->execCommand(sprintf($command, $this->path, $this->smoothing, $this->pathAnalyze, $this->pathStabilize));
+      runCommand(sprintf($command, $this->path, $this->smoothing, $this->pathAnalyze, $this->pathStabilize));
     }
-    if ($this->doCompare)
-    {
+    if ($this->doCompare) {
       $command = 'ffmpeg -i "%s" -i "%s" -filter_complex "[0:v:0]pad=iw*2:ih[bg]; [bg][1:v:0]overlay=w" "%s"';
-      $this->execCommand(sprintf($command, $this->path, $this->pathStabilize, $this->pathCompare));
+      runCommand(sprintf($command, $this->path, $this->pathStabilize, $this->pathCompare));
     }
     exit(0);
   }
 
-  private function execCommand($command)
-  {
-    $stream = popen($command . ' 2>&1', 'r');
-    while (!feof($stream))
-    {
-      echo fread($stream, 4096);
-      flush();
-    }
-    pclose($stream);
-  }
 }

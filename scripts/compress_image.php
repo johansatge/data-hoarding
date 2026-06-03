@@ -2,20 +2,16 @@
 
 date_default_timezone_set('Europe/Paris');
 
-require('parse_argv.php');
+require(__DIR__ . '/../helpers/parse_argv.php');
+require(__DIR__ . '/../helpers/common.php');
 $args = parse_argv();
 
 if (!empty($args['help']) || count($args['_']) === 0) {
-  echo implode("\n", [
-    str_repeat('-', 30),
-    'Compress images (jpeg 85%) without stripping EXIF tags',
-    '(Compressing a RAW or HEIC image will generate a corresponding jpeg file, and keep the original)',
-    str_repeat('-', 30),
-    'Usage:',
-    '$ compress_image file1.jpg file2.jpg file3.pef file4.dng file5.heic',
-    str_repeat('-', 30),
-  ]) . "\n";
-  exit(0);
+  printHelpAndExit(
+    ['Compress images (jpeg 85%) without stripping EXIF tags',
+     '(Compressing a RAW or HEIC image will generate a corresponding jpeg file, and keep the original)'],
+    ['Usage:', '$ compress_image file1.jpg file2.jpg file3.pef file4.dng file5.heic']
+  );
 }
 
 $jpegFiles = [];
@@ -61,13 +57,4 @@ function compressJpeg($filePaths) {
   // Compress if it saves at least 2% of file size
   $fileList = implode('" "', $filePaths);
   runCommand('"' . $jpegoptimBin . '" --max=85 --strip-none --threshold=2 --totals "' . $fileList . '"');
-}
-
-function runCommand($command) {
-  $stream = popen($command . ' 2>&1', 'r');
-  while (!feof($stream)) {
-    echo fread($stream, 4096);
-    flush();
-  }
-  pclose($stream);
 }
