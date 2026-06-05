@@ -15,10 +15,13 @@
 
 ## Installation
 
-* Install `ffmpeg`: `brew install ffmpeg --with-libvidstab`
-* Install `exiftool`: `brew install exiftool`
-* Install `tesseract`: `brew install tesseract`
-* Clone the project: `git clone git@github.com:johansatge/data-hoarding.git`
+* Install dependencies
+  * `brew install ffmpeg --with-libvidstab`
+  * `brew install exiftool`
+  * `brew install tesseract`
+  * `brew install terminal-notifier`
+* Clone the project
+  * `git clone git@github.com:johansatge/data-hoarding.git`
 
 Then, source the aliases in the shell (in `~/.zshrc` for instance):
 
