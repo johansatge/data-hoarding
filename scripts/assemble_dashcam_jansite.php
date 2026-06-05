@@ -2,27 +2,21 @@
 
 date_default_timezone_set('Europe/Paris');
 
-require('parse_argv.php');
+require(__DIR__ . '/../helpers/parse_argv.php');
+require(__DIR__ . '/../helpers/common.php');
 $args = parse_argv();
 
 $needsStack = !empty($args['stack']);
 $needsOverlay = !empty($args['overlay']);
 
-if (!empty($args['help']) || count($args['_']) === 0 || (!$needsStack && !$needsOverlay))
-{
-  echo implode("\n", [
-    str_repeat('-', 30),
-    'Assemble Jansite dashcam videos (format: YYYYMMDD_HHIISSX.ts) (with X being [F]ront or [R]ear)',
-    str_repeat('-', 30),
-    'Usage:',
-    '$ assemble_dascham_jansite path/to/ts/files',
-    str_repeat('-', 30),
-    'Options:',
-    '--stack    Stack vertically front and rear videos',
-    '--overlay  Overlay rear on top of the right left corner of the front',
-    str_repeat('-', 30),
-  ]) . "\n";
-  exit(0);
+if (!empty($args['help']) || count($args['_']) === 0 || (!$needsStack && !$needsOverlay)) {
+  printHelpAndExit(
+    ['Assemble Jansite dashcam videos (format: YYYYMMDD_HHIISSX.ts) (with X being [F]ront or [R]ear)'],
+    ['Usage:', '$ assemble_dascham_jansite path/to/ts/files'],
+    ['Options:',
+     '--stack    Stack vertically front and rear videos',
+     '--overlay  Overlay rear on top of the right left corner of the front']
+  );
 }
 
 $dir = $args['_'][0];
@@ -88,21 +82,4 @@ function combineFiles($filesList, $destFile, $needsFlip = false) {
     '"' . $destFile . '"',
   ]));
   unlink($filesListTextPath);
-}
-
-function runCommand($command) {
-  echo str_repeat('-', 20) . "\n";
-  echo 'Running ' . $command . "\n";
-  echo str_repeat('-', 20) . "\n";
-  $stream = popen($command . ' 2>&1', 'r');
-  while (!feof($stream)) {
-    $stdout = fread($stream, 4096);
-    flush();
-    echo $stdout;
-  }
-  $code = pclose($stream);
-  echo 'Exited with code ' . $code . "\n";
-  if ($code !== 0) {
-    exit($code);
-  }
 }
